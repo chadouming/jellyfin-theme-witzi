@@ -114,3 +114,23 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
   assert.equal(fallback.classList.contains('witzi-poster-card'), false);
   assert.equal(fallback.image.getAttribute('data-src'), undefined);
 });
+
+test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
+  const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
+
+  assert.match(
+    css,
+    /\.backgroundContainer\.withBackdrop\s*\{[^}]*background-color:\s*transparent\s*!important;/s
+  );
+  assert.match(
+    css,
+    /> \.backdropCard\s*\{\s*width:\s*33\.3333333333%\s*!important;/
+  );
+  assert.match(
+    css,
+    /\.cardPadder-backdrop,[\s\S]*padding-bottom:\s*150%\s*!important;/
+  );
+  assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
+  assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
+  assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);
+});

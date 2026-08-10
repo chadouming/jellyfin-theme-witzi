@@ -59,9 +59,9 @@ Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the
 
 - the season or series Primary poster for an episode;
 - the item's own Primary poster for a movie; or
-- the untouched native landscape backdrop when no poster exists or the lookup fails.
+- the native landscape artwork, contained without cropping, when no poster exists or the lookup fails.
 
-The portrait layout is enabled only after a poster is found. This makes the rows match Recently Added without cropping a landscape fallback.
+The rows always use the same portrait geometry as Recently Added. When the helper is not installed or no poster exists, Jellyfin's native landscape artwork is contained inside that portrait frame instead of being cropped.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 
