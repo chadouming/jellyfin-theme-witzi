@@ -684,7 +684,18 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
 .card.show-focus .cardBox,
 .card:focus .cardBox,
 .card:hover .cardBox {
-  filter: brightness(1.05);
+  /* Chromium can flatten Jellyfin's CSS-backed poster artwork to the card's
+   * fallback color when a filter is applied to the composited card wrapper. */
+  filter: none !important;
+}
+
+.card:is([data-type="Movie"], [data-type="Series"]):is(:hover, :focus, .show-focus) .cardImageContainer {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.card:is([data-type="Movie"], [data-type="Series"]):is(:hover, :focus, .show-focus) .cardOverlayContainer {
+  background-color: transparent !important;
 }
 
 /* The main series/season artwork is a static anchor, not a lifting media card. */

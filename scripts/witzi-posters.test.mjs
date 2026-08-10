@@ -656,6 +656,19 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
   assert.doesNotMatch(css, /\.witzi-no-poster-card \.cardImageContainer/);
+  assert.doesNotMatch(css, /\.card:hover \.cardBox\s*\{[^}]*filter:\s*brightness/s);
+  assert.match(
+    css,
+    /\.card\.show-focus \.cardBox,[\s\S]*\.card:hover \.cardBox\s*\{[^}]*filter:\s*none\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.card:is\(\[data-type="Movie"\], \[data-type="Series"\]\):is\(:hover, :focus, \.show-focus\) \.cardImageContainer\s*\{[^}]*opacity:\s*1\s*!important;[^}]*visibility:\s*visible\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.card:is\(\[data-type="Movie"\], \[data-type="Series"\]\):is\(:hover, :focus, \.show-focus\) \.cardOverlayContainer\s*\{[^}]*background-color:\s*transparent\s*!important;/s
+  );
   assert.match(css, /\[data-monitor\*="videoplayback"\]\[data-monitor\*="markplayed"\]/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
