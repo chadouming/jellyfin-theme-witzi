@@ -1536,7 +1536,11 @@ a[data-role="button"]:focus-visible {
 .layout-desktop .detailRibbon {
   display: block !important;
   height: auto !important;
-  margin-top: calc(var(--witzi-detail-poster-top) - var(--witzi-detail-backdrop-height)) !important;
+  margin-top: calc(
+    var(--witzi-detail-poster-top)
+    - var(--witzi-detail-backdrop-height)
+    + var(--witzi-detail-ribbon-correction, 0px)
+  ) !important;
   max-width: none;
   min-height: clamp(7.6rem, 15vh, 9rem);
   overflow: hidden;

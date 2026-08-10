@@ -25,6 +25,7 @@
   const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
   const BACKDROP_SELECTOR = '.backdropContainer';
   const DETAIL_PAGE_SELECTOR = '#itemDetailPage';
+  const DETAIL_RIBBON_CORRECTION = '--witzi-detail-ribbon-correction';
   const itemCache = new Map();
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
@@ -396,11 +397,63 @@
     if (requestId === backdropState.requestId) activateBackdrop(container, url, requestId);
   }
 
-  function detailContentCandidate(page, host, selector) {
+  function detailContentCandidate(page, host, selector, sourceSelector = selector) {
+    const sourceCandidates = [...(page.querySelectorAll?.(sourceSelector) || [])];
+    const source = sourceCandidates.find((element) => !host.contains?.(element));
     const candidates = [...(page.querySelectorAll?.(selector) || [])];
     const outsideHost = candidates.find((element) => !host.contains?.(element));
+    const insideHost = candidates.find((element) => host.contains?.(element));
 
-    return outsideHost || candidates[0] || page.querySelector?.(selector);
+    return source || outsideHost || insideHost || page.querySelector?.(selector);
+  }
+
+  function syncDetailRibbonChildren(host, content) {
+    content.forEach((element, index) => {
+      const reference = host.children?.[index] || null;
+      if (reference !== element) host.insertBefore(element, reference);
+    });
+
+    [...(host.children || [])].forEach((element) => {
+      if (!content.includes(element)) {
+        if (element.remove) element.remove();
+        else host.removeChild?.(element);
+      }
+    });
+  }
+
+  function detailPageHasScrolled(page) {
+    let element = page;
+
+    while (element) {
+      if (Number(element.scrollTop) > 1) return true;
+      element = element.parentElement;
+    }
+
+    return Number(window.scrollY) > 1
+      || Number(document.scrollingElement?.scrollTop) > 1;
+  }
+
+  function alignDetailRibbonPage(page, ribbon) {
+    const poster = page?.querySelector?.('.detailImageContainer.hide-mobile .cardBox')
+      || page?.querySelector?.('.detailImageContainer.hide-mobile .card');
+    const style = ribbon?.style;
+    if (!poster?.getBoundingClientRect || !ribbon?.getBoundingClientRect || !style?.setProperty) return;
+    if (detailPageHasScrolled(page)) return;
+
+    const posterRect = poster.getBoundingClientRect();
+    const ribbonRect = ribbon.getBoundingClientRect();
+    if (!posterRect.width || !posterRect.height || !ribbonRect.width || !ribbonRect.height) return;
+
+    const delta = posterRect.top - ribbonRect.top;
+    if (!Number.isFinite(delta)) return;
+
+    if (Math.abs(delta) > 0.5) {
+      const current = Number.parseFloat(style.getPropertyValue?.(DETAIL_RIBBON_CORRECTION)) || 0;
+      const correction = Math.round((current + delta) * 100) / 100;
+      style.setProperty(DETAIL_RIBBON_CORRECTION, `${correction}px`);
+    }
+
+    page.setAttribute?.('data-witzi-ribbon-aligned', 'true');
   }
 
   function syncDetailRibbonPage(page) {
@@ -416,20 +469,41 @@
 
     const info = detailContentCandidate(page, host, '.infoWrapper');
     const buttons = detailContentCandidate(page, host, '.mainDetailButtons');
-    const sectionContent = detailContentCandidate(page, host, '.detailSectionContent');
-    const group = detailContentCandidate(page, host, '.itemDetailsGroup');
+    const sectionContent = detailContentCandidate(
+      page,
+      host,
+      '.detailSectionContent',
+      '.detailPagePrimaryContent > .detailSection > .detailSectionContent'
+    );
+    const group = detailContentCandidate(
+      page,
+      host,
+      '.itemDetailsGroup',
+      '.detailPagePrimaryContent > .detailSection > .itemDetailsGroup'
+    );
     const content = [info, buttons, sectionContent, group].filter(Boolean);
     const current = [...(host.children || [])];
     const alreadyCurrent = current.length === content.length
       && content.every((element, index) => current[index] === element);
 
-    if (!alreadyCurrent) host.replaceChildren(...content);
+    if (!alreadyCurrent) syncDetailRibbonChildren(host, content);
 
-    if (content.length) {
+    const contentIsComplete = Boolean(
+      sectionContent
+      && group
+      && sectionContent.parentNode === host
+      && group.parentNode === host
+    );
+
+    if (contentIsComplete) {
       page.setAttribute('data-witzi-detail-content', 'active');
+    } else if (content.length) {
+      page.setAttribute('data-witzi-detail-content', 'pending');
     } else {
       page.removeAttribute?.('data-witzi-detail-content');
     }
+
+    alignDetailRibbonPage(page, ribbon);
   }
 
   function syncDetailRibbonContent() {
@@ -471,9 +545,15 @@
       childList: true,
       subtree: true
     });
-    window.addEventListener('viewshow', schedule);
-    window.addEventListener('pageshow', schedule);
-    schedule();
+    const settleDetailView = () => {
+      schedule();
+      [50, 250, 1000].forEach((delay) => window.setTimeout(schedule, delay));
+    };
+
+    window.addEventListener('viewshow', settleDetailView);
+    window.addEventListener('pageshow', settleDetailView);
+    window.addEventListener('resize', schedule);
+    settleDetailView();
   }
 
   if (document.readyState === 'loading') {
