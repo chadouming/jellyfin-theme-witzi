@@ -1636,7 +1636,7 @@ a[data-role="button"]:focus-visible {
   margin-top: calc(
     var(--witzi-detail-top-padding)
     - var(--witzi-detail-backdrop-height)
-    + var(--witzi-detail-ribbon-correction, 0px)
+    - var(--witzi-header-height)
   ) !important;
   max-width: none;
   min-height: clamp(7.6rem, 15vh, 9rem);
@@ -1753,7 +1753,7 @@ a[data-role="button"]:focus-visible {
   max-width: 100% !important;
   min-width: 0;
   overflow: hidden;
-  padding: 0 !important;
+  padding: 0 0 0.65rem !important;
   width: 100% !important;
 }
 

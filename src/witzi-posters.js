@@ -27,7 +27,6 @@
   const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
   const BACKDROP_SELECTOR = '.backdropContainer';
   const DETAIL_PAGE_SELECTOR = '#itemDetailPage';
-  const DETAIL_RIBBON_CORRECTION = '--witzi-detail-ribbon-correction';
   const THEME_WAIT_INITIAL_MS = 250;
   const THEME_WAIT_MAX_MS = 5000;
   const itemCache = new Map();
@@ -48,7 +47,8 @@
     requestId: 0
   };
   let retryTimer;
-  let scheduled = false;
+  let detailScheduled = false;
+  let mediaScheduled = false;
   let started = false;
   let themeWaitAttempts = 0;
   let themeWaitTimer;
@@ -441,36 +441,6 @@
     }
   }
 
-  function detailPageHasScrolled(page) {
-    // Jellyfin can preserve scroll offsets on the shared page ancestors while
-    // a newly shown detail page itself is still at its top. Those unrelated
-    // offsets must not suppress the initial poster/ribbon alignment.
-    return Number(page?.scrollTop) > 1;
-  }
-
-  function alignDetailRibbonPage(page, ribbon) {
-    const poster = page?.querySelector?.('.detailImageContainer.hide-mobile .cardBox')
-      || page?.querySelector?.('.detailImageContainer.hide-mobile .card');
-    const style = ribbon?.style;
-    if (!poster?.getBoundingClientRect || !ribbon?.getBoundingClientRect || !style?.setProperty) return;
-    if (detailPageHasScrolled(page)) return;
-
-    const posterRect = poster.getBoundingClientRect();
-    const ribbonRect = ribbon.getBoundingClientRect();
-    if (!posterRect.width || !posterRect.height || !ribbonRect.width || !ribbonRect.height) return;
-
-    const delta = posterRect.top - ribbonRect.top;
-    if (!Number.isFinite(delta)) return;
-
-    if (Math.abs(delta) > 0.5) {
-      const current = Number.parseFloat(style.getPropertyValue?.(DETAIL_RIBBON_CORRECTION)) || 0;
-      const correction = Math.round((current + delta) * 100) / 100;
-      style.setProperty(DETAIL_RIBBON_CORRECTION, `${correction}px`);
-    }
-
-    page.setAttribute?.('data-witzi-ribbon-aligned', 'true');
-  }
-
   function syncDetailRibbonPage(page) {
     const ribbon = page?.querySelector?.('.detailRibbon');
     if (!page || !ribbon) return;
@@ -519,8 +489,6 @@
     } else {
       page.removeAttribute?.('data-witzi-detail-content');
     }
-
-    alignDetailRibbonPage(page, ribbon);
   }
 
   function syncDetailRibbonContent() {
@@ -542,20 +510,44 @@
     }
   }
 
-  function schedule() {
-    if (scheduled) return;
-    scheduled = true;
+  function scheduleDetail() {
+    if (detailScheduled) return;
+    detailScheduled = true;
     window.requestAnimationFrame(() => {
-      scheduled = false;
-      syncVideoPlayback();
+      detailScheduled = false;
       syncDetailRibbonContent();
+    });
+  }
+
+  function scheduleMedia() {
+    if (mediaScheduled) return;
+    mediaScheduled = true;
+    window.requestAnimationFrame(() => {
+      mediaScheduled = false;
+      syncVideoPlayback();
       void processCards();
       void processBackdrop();
     });
   }
 
+  function schedule() {
+    scheduleDetail();
+    scheduleMedia();
+  }
+
+  function mutationChangesDetailLayout(mutation) {
+    return mutation?.type === 'childList'
+      || (mutation?.type === 'attributes'
+        && ['class', 'data-id'].includes(mutation.attributeName));
+  }
+
   function start() {
-    const observer = new MutationObserver(schedule);
+    const observer = new MutationObserver((mutations = []) => {
+      scheduleMedia();
+      if (!mutations.length || mutations.some(mutationChangesDetailLayout)) {
+        scheduleDetail();
+      }
+    });
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class', 'data-id', 'data-src', 'data-url', 'style'],
