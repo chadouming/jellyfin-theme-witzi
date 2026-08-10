@@ -15,7 +15,7 @@ The default is Catppuccin Mocha. Six matching variants are included:
 | Dracula | Gothic violet and pink | `dist/witzi-dracula.css` |
 | Gruvbox | Warm retro gold and orange | `dist/witzi-gruvbox.css` |
 
-Series detail pages use a thicker floating Witzi information ribbon, and season pages present episodes as compact interactive rows sized around their native 16:9 landscape artwork.
+Series detail pages use a thicker floating Witzi information ribbon, place the media logo over the main poster, and shorten the backdrop so compact 16:9 episode rows begin higher on screen.
 
 ## Install
 
@@ -49,9 +49,9 @@ Use one of these GitHub Pages imports to follow the latest published version:
 
 Use Jellyfin's built-in **Dark** theme under your user display settings for every variant except Latte; use **Light** for Latte so any unstyled fallback controls match.
 
-For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.4 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.4) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
+For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.5 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.5) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
 
-For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.4/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
+For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.5/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 
@@ -60,7 +60,7 @@ Clients can disable server-provided custom CSS in their display preferences. As 
 Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. Witzi now has two cooperating pieces:
 
 - the **Witzi Episode Posters** server plugin creates a persistent 2:3 Primary image from each episode's own video; and
-- the optional [`dist/witzi-posters.js`](dist/witzi-posters.js) browser helper makes Jellyfin Web request portrait Primary images for Continue Watching and Next Up.
+- the optional [`dist/witzi-posters.js`](dist/witzi-posters.js) browser helper makes Jellyfin Web request portrait Primary images for Continue Watching and Next Up, and maintains seamless backdrop transitions.
 
 The browser helper selects:
 
@@ -88,7 +88,7 @@ Install **Witzi Episode Posters**, restart Jellyfin, then run **Dashboard -> Sch
 - registers the new image immediately and reports its 2:3 dimensions; and
 - never overwrites an existing image sidecar or an existing portrait Primary image.
 
-The Jellyfin service account therefore needs write access to the media folders. Poster generation has no automatic trigger; run the Library task manually whenever new episodes are added. GPU decoding depends on the FFmpeg build, exposed device, driver, and source codec; unsupported combinations fall back automatically. Existing sidecars are not recolored or overwritten. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.3/Witzi.Episode.Posters_0.1.3.0.zip) is also available from the release.
+The Jellyfin service account therefore needs write access to the media folders. Poster generation has no automatic trigger; run the Library task manually whenever new episodes are added. GPU decoding depends on the FFmpeg build, exposed device, driver, and source codec; unsupported combinations fall back automatically. Existing sidecars are not recolored or overwritten. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.5/Witzi.Episode.Posters_0.1.4.0.zip) is also available from the release.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 
@@ -110,6 +110,8 @@ If an episode frame is still visible, run `document.documentElement.dataset.witz
 
 Enable **Settings → Display → Backdrops** for each Jellyfin Web client where you want dynamic artwork. Witzi makes the page canvas transparent while an internal or wrapper-provided backdrop is active. Internal Jellyfin artwork receives Witzi's palette-colored base, soft `2.5px` blur, gentle desaturation, accent glow, and slight scale-up; backdrop-less pages continue to use the Witzi pattern.
 
+When the browser helper is installed, it keeps the last successfully loaded backdrop in an independent two-layer cache while Jellyfin preloads the next image. Only a loaded image can enter the crossfade, and stale requests are ignored, so Jellyfin clearing its native backdrop container cannot expose the solid theme color between images. The cache and page canvas are suppressed automatically while video media is playing.
+
 ## Compatibility
 
 The theme targets Jellyfin Web 10.11 and the current palette-variable model in Jellyfin Web 12. It maps the official `--jf-palette-*` variables for current components and also styles stable legacy selectors used by media cards, details, playback, Live TV, forms, tabs, dialogs, and navigation.
@@ -126,7 +128,7 @@ plugin/          Jellyfin 12 episode-poster plugin source and ABI manifest
 src/palettes/    Palette tokens
 src/             Shared styling and optional poster-helper source
 themes/          Small composable @import entry points
-dist/            Standalone CSS builds and the poster helper
+dist/            Standalone CSS builds and the browser helper
 scripts/         Dependency-free build/check script
 ```
 

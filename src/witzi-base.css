@@ -160,11 +160,88 @@ html.transparentDocument #reactRoot {
   background: transparent !important;
 }
 
+/* Keep every themed canvas below the HTML video element during playback. */
+html[data-witzi-video-active="true"],
+html:has(.videoPlayerContainer) {
+  background-color: #000 !important;
+  background-image: none !important;
+}
+
+html[data-witzi-video-active="true"] body,
+html[data-witzi-video-active="true"] #reactRoot,
+html:has(.videoPlayerContainer) body,
+html:has(.videoPlayerContainer) #reactRoot {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+html[data-witzi-video-active="true"] .backgroundContainer,
+html[data-witzi-video-active="true"] .backdropContainer,
+html[data-witzi-video-active="true"] .witzi-backdrop-cache,
+html:has(.videoPlayerContainer) .backgroundContainer,
+html:has(.videoPlayerContainer) .backdropContainer,
+html:has(.videoPlayerContainer) .witzi-backdrop-cache {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 /* Witzi's colored, softly blurred pattern treatment applied to media art. */
 .backdropContainer {
   background-color: var(--witzi-bg) !important;
   isolation: isolate;
   overflow: hidden;
+}
+
+/*
+ * Jellyfin clears its backdropContainer before some replacement images finish
+ * loading. The browser helper places this two-layer cache immediately before
+ * that container, where Jellyfin's cleanup cannot remove the last good image.
+ */
+.witzi-backdrop-cache {
+  background-color: var(--witzi-bg);
+  contain: layout style size;
+  height: 100vh;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: -1;
+}
+
+.witzi-backdrop-cache-layer {
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(2.5px) saturate(0.9);
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  transform: scale(1.025);
+  transform-origin: center;
+  transition: opacity 800ms ease;
+}
+
+.witzi-backdrop-cache-layer.witzi-backdrop-cache-active {
+  opacity: 0.66;
+}
+
+.witzi-backdrop-cache-initializing .witzi-backdrop-cache-layer {
+  transition: none;
+}
+
+.witzi-backdrop-cache-hidden {
+  display: none;
+}
+
+.backdropContainer.witzi-backdrop-cache-ready {
+  background-color: transparent !important;
+}
+
+.backdropContainer.witzi-backdrop-cache-ready .backdropImage {
+  animation: none !important;
+  opacity: 0 !important;
 }
 
 .backdropContainer::after {
@@ -543,7 +620,7 @@ html.transparentDocument #reactRoot {
 
 /*
  * Continue Watching and Next Up always use the portrait geometry from Recently
- * Added. The optional Witzi poster helper replaces their artwork with a real
+ * Added. The optional Witzi browser helper replaces their artwork with a real
  * season, series, or movie poster after verifying the replacement image loads.
  * Jellyfin assigns both playback and mark-played monitor hints to these
  * sections, which avoids fragile title selectors.
@@ -570,6 +647,11 @@ html.transparentDocument #reactRoot {
 
 .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .blurhash-canvas {
   opacity: 0 !important;
+}
+
+/* Mobile cards remain tappable; only the redundant corner play indicator goes. */
+.layout-mobile .cardOverlayButton-br[data-action="play"] {
+  display: none !important;
 }
 
 @media (min-width: 25em) {
@@ -1209,6 +1291,43 @@ a[data-role="button"]:focus-visible {
 .layout-desktop .detailPagePrimaryContainer {
   --witzi-detail-ribbon-edge: clamp(0.75rem, 3.3vw, 3.5rem);
   --witzi-detail-ribbon-inner-padding: clamp(1rem, 3.3vw, 3.5rem);
+}
+
+/*
+ * Put transparent media logos over the upper portion of the detail poster.
+ * With the logo no longer occupying the backdrop composition, the shorter
+ * backdrop brings the ribbon, description, and episode list higher on screen.
+ */
+.layout-desktop #itemDetailPage {
+  --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
+  --witzi-detail-poster-lift: 12.96em;
+}
+
+.layout-desktop #itemDetailPage .itemBackdrop {
+  height: var(--witzi-detail-backdrop-height);
+}
+
+.layout-desktop #itemDetailPage .detailLogo {
+  background-position: center center;
+  background-size: 80% auto;
+  filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.76));
+  height: clamp(3.5rem, 7vw, 7.5rem);
+  pointer-events: none;
+  top: calc(var(--witzi-detail-backdrop-height) - var(--witzi-detail-poster-lift) + clamp(0.7rem, 1.2vw, 1.25rem));
+  width: 25vw;
+  z-index: 4;
+}
+
+.layout-desktop[dir="ltr"] #itemDetailPage .detailLogo,
+.layout-desktop [dir="ltr"] #itemDetailPage .detailLogo {
+  left: 3.3vw;
+  right: auto;
+}
+
+.layout-desktop[dir="rtl"] #itemDetailPage .detailLogo,
+.layout-desktop [dir="rtl"] #itemDetailPage .detailLogo {
+  left: auto;
+  right: 3.3vw;
 }
 
 .layout-desktop .detailRibbon {

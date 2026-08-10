@@ -17,6 +17,14 @@ function unrefTimeout(callback, delay) {
   return timer;
 }
 
+async function waitFor(predicate, timeoutMs = 500) {
+  const started = Date.now();
+  while (!predicate()) {
+    if (Date.now() - started >= timeoutMs) throw new Error('Timed out waiting for test state');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
 function createCard(id, type) {
   const attributes = new Map([
     ['data-src', `https://jellyfin.test/Items/${id}/Images/Backdrop`]
@@ -37,6 +45,39 @@ function createCard(id, type) {
       return selector === '.cardImageContainer' ? image : null;
     }
   };
+}
+
+function createElement() {
+  const attributes = new Map();
+  const element = {
+    children: [],
+    classList: new ClassList(),
+    nextSibling: null,
+    parentNode: null,
+    style: {},
+    appendChild(child) {
+      child.parentNode = this;
+      this.children.push(child);
+      return child;
+    },
+    getAttribute(name) { return attributes.get(name) || null; },
+    removeAttribute(name) { attributes.delete(name); },
+    setAttribute(name, value) { attributes.set(name, value); },
+    querySelectorAll(selector) {
+      return selector === '.backdropImage'
+        ? this.children.filter((child) => child.classList.contains('backdropImage'))
+        : [];
+    }
+  };
+  return element;
+}
+
+function createBackdropImage(url) {
+  const image = createElement();
+  image.classList.add('backdropImage');
+  image.setAttribute('data-url', url);
+  image.style.backgroundImage = `url("${url}")`;
+  return image;
 }
 
 test('uses loadable posters and retains native artwork when candidates fail', async () => {
@@ -200,6 +241,120 @@ test('uses loadable posters and retains native artwork when candidates fail', as
   assert.equal(calls.length, 1);
 });
 
+test('keeps the current backdrop visible until a newer backdrop is ready', async () => {
+  const urls = {
+    first: 'https://jellyfin.test/Items/first/Images/Backdrop',
+    slow: 'https://jellyfin.test/Items/slow/Images/Backdrop',
+    newest: 'https://jellyfin.test/Items/newest/Images/Backdrop'
+  };
+  const container = createElement();
+  container.classList.add('backdropContainer');
+  container.appendChild(createBackdropImage(urls.first));
+
+  const root = createElement();
+  root.appendChild(container);
+  root.insertBefore = function insertBefore(child, reference) {
+    const oldIndex = this.children.indexOf(child);
+    if (oldIndex >= 0) this.children.splice(oldIndex, 1);
+    const index = this.children.indexOf(reference);
+    this.children.splice(index < 0 ? this.children.length : index, 0, child);
+    child.parentNode = this;
+    this.children.forEach((entry, entryIndex) => {
+      entry.nextSibling = this.children[entryIndex + 1] || null;
+    });
+    return child;
+  };
+
+  let observerCallback;
+  let videoPlayer = null;
+  const slowImages = [];
+  const documentAttributes = new Map();
+  const context = {
+    console,
+    Image: class {
+      set src(url) {
+        if (url === urls.slow) {
+          slowImages.push(this);
+        } else {
+          setTimeout(() => this.onload?.(), 0);
+        }
+      }
+    },
+    document: {
+      readyState: 'complete',
+      documentElement: {
+        removeAttribute(name) { documentAttributes.delete(name); },
+        setAttribute(name, value) { documentAttributes.set(name, value); }
+      },
+      createElement,
+      querySelector(selector) {
+        if (selector === '.backdropContainer') return container;
+        if (selector === '.videoPlayerContainer') return videoPlayer;
+        return null;
+      },
+      querySelectorAll: () => [],
+      addEventListener() {}
+    },
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() {}
+    },
+    setTimeout,
+    clearTimeout
+  };
+  context.window = {
+    addEventListener() {},
+    clearTimeout,
+    requestAnimationFrame: (callback) => setTimeout(callback, 0),
+    setTimeout: unrefTimeout
+  };
+
+  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  await waitFor(() => root.children[0]?.classList.contains('witzi-backdrop-cache'));
+
+  const cache = root.children[0];
+  const activeLayer = () => cache.children.find((layer) => (
+    layer.classList.contains('witzi-backdrop-cache-active')
+  ));
+  await waitFor(() => Boolean(activeLayer()));
+
+  assert.equal(cache.classList.contains('witzi-backdrop-cache'), true);
+  assert.equal(cache.nextSibling, container);
+  assert.equal(activeLayer().getAttribute('data-url'), urls.first);
+  assert.equal(container.classList.contains('witzi-backdrop-cache-ready'), true);
+  assert.equal(documentAttributes.get('data-witzi-backdrop-cache'), 'active');
+
+  container.children = [];
+  observerCallback();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(activeLayer().getAttribute('data-url'), urls.first);
+
+  container.appendChild(createBackdropImage(urls.slow));
+  observerCallback();
+  await waitFor(() => slowImages.length === 1);
+  assert.equal(activeLayer().getAttribute('data-url'), urls.first);
+
+  container.appendChild(createBackdropImage(urls.newest));
+  observerCallback();
+  await waitFor(() => activeLayer()?.getAttribute('data-url') === urls.newest);
+  assert.equal(activeLayer().getAttribute('data-url'), urls.newest);
+
+  slowImages[0].onload?.();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(activeLayer().getAttribute('data-url'), urls.newest);
+
+  videoPlayer = createElement();
+  observerCallback();
+  await waitFor(() => documentAttributes.get('data-witzi-video-active') === 'true');
+  assert.equal(documentAttributes.get('data-witzi-video-active'), 'true');
+
+  videoPlayer = null;
+  observerCallback();
+  await waitFor(() => !documentAttributes.has('data-witzi-video-active'));
+  assert.equal(documentAttributes.has('data-witzi-video-active'), false);
+});
+
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
 
@@ -219,6 +374,14 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
     css,
     /\.backdropImage\s*\{[^}]*filter:\s*blur\(2\.5px\) saturate\(0\.9\);[^}]*transform:\s*scale\(1\.025\);/s
   );
+  assert.match(
+    css,
+    /\.witzi-backdrop-cache-layer\s*\{[^}]*opacity:\s*0;[^}]*transition:\s*opacity 800ms ease;/s
+  );
+  assert.match(css, /\.witzi-backdrop-cache-layer\.witzi-backdrop-cache-active\s*\{[^}]*opacity:\s*0\.66;/s);
+  assert.match(css, /\.backdropContainer\.witzi-backdrop-cache-ready \.backdropImage/);
+  assert.match(css, /html\[data-witzi-video-active="true"\] \.backgroundContainer/);
+  assert.match(css, /html:has\(\.videoPlayerContainer\) \.witzi-backdrop-cache/);
   assert.match(css, /@keyframes witzi-backdrop-fadein/);
   assert.match(
     css,
@@ -234,6 +397,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);
+  assert.match(css, /\.layout-mobile \.cardOverlayButton-br\[data-action="play"\]\s*\{[^}]*display:\s*none\s*!important;/s);
 });
 
 test('compacts episode rows and separates the ribbon from detail artwork', async () => {
@@ -272,5 +436,13 @@ test('compacts episode rows and separates the ribbon from detail artwork', async
   assert.match(
     css,
     /\.MuiAppBar-root > \.MuiToolbar-root:first-child > \.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before\s*\{[^}]*border-radius:\s*var\(--witzi-header-radius\);/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage \.itemBackdrop\s*\{[^}]*height:\s*var\(--witzi-detail-backdrop-height\);/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage \.detailLogo\s*\{[^}]*background-size:\s*80% auto;[^}]*top:\s*calc\(var\(--witzi-detail-backdrop-height\) - var\(--witzi-detail-poster-lift\)/s
   );
 });
