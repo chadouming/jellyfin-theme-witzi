@@ -583,7 +583,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*block\s*!important;[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(\s*var\(--witzi-detail-poster-top\)\s*-\s*var\(--witzi-detail-backdrop-height\)\s*\+\s*var\(--witzi-detail-ribbon-correction, 0px\)\s*\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0;/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*block\s*!important;[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(\s*var\(--witzi-detail-top-padding\)\s*-\s*var\(--witzi-detail-backdrop-height\)\s*\+\s*var\(--witzi-detail-ribbon-correction, 0px\)\s*\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0;/s
   );
   assert.match(
     css,

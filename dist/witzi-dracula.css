@@ -1582,7 +1582,7 @@ a[data-role="button"]:focus-visible {
   display: block !important;
   height: auto !important;
   margin-top: calc(
-    var(--witzi-detail-poster-top)
+    var(--witzi-detail-top-padding)
     - var(--witzi-detail-backdrop-height)
     + var(--witzi-detail-ribbon-correction, 0px)
   ) !important;
