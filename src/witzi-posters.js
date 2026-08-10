@@ -24,6 +24,7 @@
 
   const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
   const BACKDROP_SELECTOR = '.backdropContainer';
+  const DETAIL_PAGE_SELECTOR = '#itemDetailPage';
   const itemCache = new Map();
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
@@ -395,6 +396,44 @@
     if (requestId === backdropState.requestId) activateBackdrop(container, url, requestId);
   }
 
+  function detailMetadataSources(group) {
+    const renderTargets = [...(group?.children || [])];
+
+    return [renderTargets[4], renderTargets[5]]
+      .map((target) => target?.querySelector?.('.detailsGroupItem'))
+      .filter((source) => source?.textContent?.trim());
+  }
+
+  function syncDetailRibbonMetadata() {
+    const page = document.querySelector?.(DETAIL_PAGE_SELECTOR);
+    const ribbon = page?.querySelector?.('.detailRibbon');
+    const group = page?.querySelector?.('.itemDetailsGroup');
+    if (!page || !ribbon || !group || typeof document.createElement !== 'function') return;
+
+    let host = ribbon.querySelector?.('.witzi-ribbon-metadata');
+    if (!host) {
+      host = document.createElement('div');
+      host.classList.add('witzi-ribbon-metadata');
+      ribbon.insertBefore(host, ribbon.querySelector?.('.mainDetailButtons') || null);
+    }
+
+    const sources = detailMetadataSources(group);
+    const signature = sources
+      .map((source) => source.innerHTML || source.textContent || '')
+      .join('\u001f');
+
+    if (host.dataset.witziMetadataSignature !== signature) {
+      host.replaceChildren(...sources.map((source) => source.cloneNode(true)));
+      host.dataset.witziMetadataSignature = signature;
+    }
+
+    if (sources.length) {
+      page.setAttribute('data-witzi-detail-metadata', 'active');
+    } else {
+      page.removeAttribute?.('data-witzi-detail-metadata');
+    }
+  }
+
   function syncVideoPlayback() {
     const active = Boolean(document.querySelector?.('.videoPlayerContainer'));
     if (active === videoPlaybackActive) return;
@@ -413,6 +452,7 @@
     window.requestAnimationFrame(() => {
       scheduled = false;
       syncVideoPlayback();
+      syncDetailRibbonMetadata();
       void processCards();
       void processBackdrop();
     });

@@ -885,11 +885,11 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
   background-size: cover;
   border: 1px solid rgb(var(--witzi-border-rgb) / 0.8);
   border-radius: calc(var(--witzi-radius-md) - 3px);
-  flex: 0 0 clamp(10rem, 17vw, 14rem);
+  flex: 0 0 var(--witzi-detail-rail-width, clamp(10rem, 17vw, 14rem));
   height: auto !important;
   margin: 0 !important;
   overflow: hidden;
-  width: clamp(10rem, 17vw, 14rem) !important;
+  width: var(--witzi-detail-rail-width, clamp(10rem, 17vw, 14rem)) !important;
 }
 
 #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImage-large > img,
@@ -1342,11 +1342,18 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
   --witzi-detail-rail-edge: clamp(1rem, 3.3vw, 3.5rem);
   --witzi-detail-rail-gap: clamp(1rem, 1.8vw, 1.6rem);
-  --witzi-detail-rail-width: clamp(10rem, min(28vw, 48vh), 26rem);
-  --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.85rem, 2vh, 1.25rem));
-  --witzi-detail-logo-gap: 0.5rem;
-  --witzi-detail-logo-height: clamp(2.75rem, 7vh, 4.25rem);
+  --witzi-detail-rail-width: clamp(8rem, min(17vw, 30vh), 14rem);
+  --witzi-detail-poster-height: clamp(12rem, min(25.5vw, 45vh), 21rem);
+  --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.55rem, 1.2vh, 0.9rem));
+  --witzi-detail-logo-gap: 0.35rem;
+  --witzi-detail-logo-height: clamp(2.25rem, 5.5vh, 3.5rem);
+  --witzi-detail-poster-top: calc(var(--witzi-detail-rail-top) + var(--witzi-detail-logo-height) + var(--witzi-detail-logo-gap));
+  --witzi-detail-next-up-top: calc(var(--witzi-detail-poster-top) + var(--witzi-detail-poster-height) + 0.65rem);
   --witzi-detail-content-start: calc(var(--witzi-detail-rail-edge) + var(--witzi-detail-rail-width) + var(--witzi-detail-rail-gap));
+}
+
+.layout-desktop #itemDetailPage:has(> .detailLogo.hide) {
+  --witzi-detail-poster-top: var(--witzi-detail-rail-top);
 }
 
 /*
@@ -1381,19 +1388,64 @@ a[data-role="button"]:focus-visible {
   max-height: none;
   max-width: none;
   position: fixed;
-  top: calc(var(--witzi-detail-rail-top) + var(--witzi-detail-logo-height) + var(--witzi-detail-logo-gap)) !important;
+  top: var(--witzi-detail-poster-top) !important;
   width: var(--witzi-detail-rail-width) !important;
   z-index: 3;
 }
 
-.layout-desktop #itemDetailPage > .detailLogo.hide + .detailPageWrapperContainer .detailImageContainer.hide-mobile .card {
-  top: var(--witzi-detail-rail-top) !important;
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) {
+  box-sizing: border-box;
+  margin: 0 !important;
+  max-height: calc(100vh - var(--witzi-detail-next-up-top) - 0.75rem);
+  overflow: hidden;
+  padding: 0 !important;
+  position: fixed;
+  top: var(--witzi-detail-next-up-top);
+  width: var(--witzi-detail-rail-width);
+  z-index: 4;
+}
+
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) .sectionTitle {
+  font-size: clamp(0.85rem, 1.1vw, 1rem);
+  line-height: 1.2;
+  margin: 0 0 0.35rem;
+  padding: 0;
+}
+
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) .nextUpItems {
+  display: block;
+  padding: 0 !important;
+  width: 100%;
+}
+
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) .nextUpItems > .card {
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) .nextUpItems > .card:not(:first-child) {
+  display: none !important;
+}
+
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) .cardBox {
+  margin: 0 !important;
+}
+
+.layout-desktop #itemDetailPage .nextUpSection:not(.hide) .cardText {
+  font-size: 0.78rem;
+  line-height: 1.2;
+  overflow: hidden;
+  padding-inline: 0.15rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .layout-desktop[dir="ltr"] #itemDetailPage .detailLogo,
 .layout-desktop [dir="ltr"] #itemDetailPage .detailLogo,
 .layout-desktop[dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
-.layout-desktop [dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card {
+.layout-desktop [dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
+.layout-desktop[dir="ltr"] #itemDetailPage .nextUpSection:not(.hide),
+.layout-desktop [dir="ltr"] #itemDetailPage .nextUpSection:not(.hide) {
   left: var(--witzi-detail-rail-edge) !important;
   right: auto;
 }
@@ -1401,7 +1453,9 @@ a[data-role="button"]:focus-visible {
 .layout-desktop[dir="rtl"] #itemDetailPage .detailLogo,
 .layout-desktop [dir="rtl"] #itemDetailPage .detailLogo,
 .layout-desktop[dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
-.layout-desktop [dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card {
+.layout-desktop [dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
+.layout-desktop[dir="rtl"] #itemDetailPage .nextUpSection:not(.hide),
+.layout-desktop [dir="rtl"] #itemDetailPage .nextUpSection:not(.hide) {
   left: auto;
   right: var(--witzi-detail-rail-edge) !important;
 }
@@ -1436,14 +1490,21 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) #listChildrenCollapsible {
-  margin-top: -0.35rem;
+  margin-top: 0;
 }
 
 .layout-desktop .detailRibbon {
+  column-gap: clamp(0.65rem, 1.25vw, 1rem);
+  display: grid;
+  grid-template-areas:
+    "info actions"
+    "metadata actions";
+  grid-template-columns: minmax(0, 1fr) auto;
   height: auto;
-  margin-top: -8.6em;
-  min-height: 8.6em;
+  margin-top: calc(var(--witzi-detail-poster-top) - var(--witzi-detail-backdrop-height));
+  min-height: clamp(7.6rem, 15vh, 9rem);
   padding-block: 0.65rem;
+  row-gap: 0.4rem;
 }
 
 .layout-desktop[dir="ltr"] .detailRibbon,
@@ -1464,12 +1525,90 @@ a[data-role="button"]:focus-visible {
 
 .detailRibbon .infoWrapper {
   align-self: center;
+  grid-area: info;
 }
 
 .detailRibbon .mainDetailButtons {
+  align-self: center;
   flex-wrap: wrap;
   gap: 0.12rem;
+  grid-area: actions;
   margin-block: 0.55rem 0.25rem;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-metadata {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  grid-area: metadata;
+  min-width: 0;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-metadata:empty {
+  display: none;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-metadata .detailsGroupItem {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+  margin: 0 !important;
+  max-width: min(100%, 32rem);
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-metadata .detailsGroupItem .label {
+  color: var(--witzi-muted);
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  margin: 0 !important;
+  text-transform: uppercase;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-metadata .focuscontainer-x {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-metadata .button-link {
+  background: var(--witzi-accent-dim);
+  border: 1px solid rgb(var(--witzi-accent-rgb) / 0.32);
+  border-radius: 999px;
+  color: var(--witzi-accent) !important;
+  font-size: 0.76rem;
+  padding: 0.15rem 0.48rem !important;
+}
+
+#itemDetailPage .itemTags,
+#itemDetailPage .itemExternalLinks,
+#itemDetailPage .itemGenres {
+  display: none !important;
+}
+
+#itemDetailPage[data-witzi-detail-metadata="active"] .itemDetailsGroup > :nth-child(5),
+#itemDetailPage[data-witzi-detail-metadata="active"] .itemDetailsGroup > :nth-child(6) {
+  display: none !important;
+}
+
+.layout-desktop #itemDetailPage .detailSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-desktop #itemDetailPage:has(.nextUpSection:not(.hide)) #listChildrenCollapsible:not(.hide),
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem:is([data-type="Episode"], [data-type="Season"])) #listChildrenCollapsible {
+  margin-top: 0;
+  order: -20;
+}
+
+@media (max-height: 36rem) {
+  .layout-desktop #itemDetailPage .nextUpSection:not(.hide) .cardText {
+    display: none;
+  }
 }
 
 .detailRibbon .detailButton {

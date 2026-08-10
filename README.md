@@ -15,7 +15,7 @@ The default is Catppuccin Mocha. Six matching variants are included:
 | Dracula | Gothic violet and pink | `dist/witzi-dracula.css` |
 | Gruvbox | Warm retro gold and orange | `dist/witzi-gruvbox.css` |
 
-Desktop detail pages anchor the media logo above a large, viewport-aware poster in a fixed left rail, while the information ribbon, synopsis, episode rows, and secondary sections scroll beside it without overlapping the artwork. Season pages also compact the synopsis area so 16:9 episode rows begin higher on screen.
+Desktop detail pages use a fixed, viewport-aware artwork rail: the media logo sits above a poster matched to the episode-frame width, and Series pages place one compact landscape Next Up card below it. The higher information ribbon aligns with the poster top and contains the action buttons plus Studio/Genre labels; Series and Season lists start directly below it, while movie information follows in the same scrolling column. Keyword tags and external database links are hidden.
 
 ## Install
 
@@ -69,6 +69,8 @@ The browser helper selects:
 - Jellyfin's native artwork, contained without cropping, only when every poster candidate fails to load.
 
 The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
+
+On desktop detail pages, the same helper mirrors Jellyfin's Studio and Genre metadata into the detail ribbon. The original metadata rows are hidden only after the ribbon copies are ready, so clients that do not load the helper keep Jellyfin's normal metadata fallback.
 
 #### Jellyfin 12 episode-poster plugin
 

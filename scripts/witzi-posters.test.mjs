@@ -355,6 +355,81 @@ test('keeps the current backdrop visible until a newer backdrop is ready', async
   assert.equal(documentAttributes.has('data-witzi-video-active'), false);
 });
 
+test('mirrors studio and genre metadata into the detail ribbon', async () => {
+  const metadataSources = ['Studio: Witzi Works', 'Genre: Animation'].map((text, index) => ({
+    innerHTML: `<span>${text}</span>`,
+    textContent: text,
+    cloneNode() { return { cloneOf: index, textContent: text }; }
+  }));
+  const renderTargets = Array.from({ length: 6 }, (_, index) => ({
+    querySelector(selector) {
+      return selector === '.detailsGroupItem' ? metadataSources[index - 4] || null : null;
+    }
+  }));
+  const group = { children: renderTargets };
+  const buttons = {};
+  let metadataHost = null;
+  const ribbon = {
+    insertBefore(host, reference) {
+      assert.equal(reference, buttons);
+      metadataHost = host;
+    },
+    querySelector(selector) {
+      if (selector === '.witzi-ribbon-metadata') return metadataHost;
+      if (selector === '.mainDetailButtons') return buttons;
+      return null;
+    }
+  };
+  const pageAttributes = new Map();
+  const page = {
+    querySelector(selector) {
+      if (selector === '.detailRibbon') return ribbon;
+      if (selector === '.itemDetailsGroup') return group;
+      return null;
+    },
+    removeAttribute(name) { pageAttributes.delete(name); },
+    setAttribute(name, value) { pageAttributes.set(name, value); }
+  };
+  const context = {
+    console,
+    document: {
+      readyState: 'complete',
+      documentElement: { setAttribute() {}, removeAttribute() {} },
+      createElement() {
+        return {
+          children: [],
+          classList: new ClassList(),
+          dataset: {},
+          replaceChildren(...children) { this.children = children; }
+        };
+      },
+      querySelector(selector) {
+        return selector === '#itemDetailPage' ? page : null;
+      },
+      querySelectorAll() { return []; },
+      addEventListener() {}
+    },
+    MutationObserver: class { observe() {} },
+    setTimeout,
+    clearTimeout
+  };
+  context.window = {
+    addEventListener() {},
+    clearTimeout,
+    requestAnimationFrame: (callback) => setTimeout(callback, 0),
+    setTimeout: unrefTimeout
+  };
+
+  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  await waitFor(() => metadataHost?.children.length === 2);
+
+  assert.equal(metadataHost.classList.contains('witzi-ribbon-metadata'), true);
+  assert.deepEqual(metadataHost.children.map((child) => child.cloneOf), [0, 1]);
+  assert.equal(pageAttributes.get('data-witzi-detail-metadata'), 'active');
+  assert.equal(renderTargets.length, 6);
+});
+
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
 
@@ -400,8 +475,9 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   assert.match(css, /\.layout-mobile \.cardOverlayButton-br\[data-action="play"\]\s*\{[^}]*display:\s*none\s*!important;/s);
 });
 
-test('compacts episode rows and anchors detail artwork beside scrolling content', async () => {
+test('anchors series artwork and Next Up beside ribbon-first scrolling content', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
+  const helper = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
 
   assert.match(
     css,
@@ -409,7 +485,7 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /\.listItem\[data-type="Episode"\][\s\S]*\.listItemImage-large\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*flex:\s*0 0 clamp\(10rem, 17vw, 14rem\);/s
+    /\.listItem\[data-type="Episode"\][\s\S]*\.listItemImage-large\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*flex:\s*0 0 var\(--witzi-detail-rail-width, clamp\(10rem, 17vw, 14rem\)\);/s
   );
   assert.match(css, /\.listItem\[data-type="Episode"\]:focus-within/);
   assert.match(
@@ -418,7 +494,7 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*margin-top:\s*-8\.6em;[^}]*min-height:\s*8\.6em;/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\);[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);/s
   );
   assert.match(
     css,
@@ -443,7 +519,7 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(10rem, min\(28vw, 48vh\), 26rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(2\.75rem, 7vh, 4\.25rem\);[^}]*--witzi-detail-content-start:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(8rem, min\(17vw, 30vh\), 14rem\);[^}]*--witzi-detail-poster-height:\s*clamp\(12rem, min\(25\.5vw, 45vh\), 21rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(2\.25rem, 5\.5vh, 3\.5rem\);[^}]*--witzi-detail-next-up-top:/s
   );
   assert.doesNotMatch(
     css,
@@ -455,11 +531,19 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*position:\s*fixed;[^}]*top:\s*calc\(var\(--witzi-detail-rail-top\) \+ var\(--witzi-detail-logo-height\) \+ var\(--witzi-detail-logo-gap\)\)\s*!important;[^}]*width:\s*var\(--witzi-detail-rail-width\)\s*!important;/s
+    /\.layout-desktop #itemDetailPage \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-poster-top\)\s*!important;[^}]*width:\s*var\(--witzi-detail-rail-width\)\s*!important;/s
   );
   assert.match(
     css,
-    /#itemDetailPage > \.detailLogo\.hide \+ \.detailPageWrapperContainer \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*top:\s*var\(--witzi-detail-rail-top\)\s*!important;/s
+    /\.layout-desktop #itemDetailPage:has\(> \.detailLogo\.hide\)\s*\{[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage \.nextUpSection:not\(\.hide\)\s*\{[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-next-up-top\);[^}]*width:\s*var\(--witzi-detail-rail-width\);/s
+  );
+  assert.match(
+    css,
+    /\.nextUpSection:not\(\.hide\) \.nextUpItems > \.card:not\(:first-child\)\s*\{[^}]*display:\s*none\s*!important;/s
   );
   assert.match(
     css,
@@ -476,6 +560,22 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) #listChildrenCollapsible\s*\{[^}]*margin-top:\s*-0\.35rem;/s
+    /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) #listChildrenCollapsible\s*\{[^}]*margin-top:\s*0;/s
   );
+  assert.match(
+    css,
+    /#itemDetailPage \.itemTags,[\s\S]*#itemDetailPage \.itemExternalLinks,[\s\S]*#itemDetailPage \.itemGenres\s*\{[^}]*display:\s*none\s*!important;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage\[data-witzi-detail-metadata="active"\] \.itemDetailsGroup > :nth-child\(5\),[\s\S]*:nth-child\(6\)\s*\{[^}]*display:\s*none\s*!important;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
+  );
+  assert.match(helper, /function syncDetailRibbonMetadata\(\)/);
+  assert.match(helper, /\[renderTargets\[4\], renderTargets\[5\]\]/);
+  assert.match(helper, /source\.cloneNode\(true\)/);
+  assert.match(helper, /setAttribute\('data-witzi-detail-metadata', 'active'\)/);
 });
