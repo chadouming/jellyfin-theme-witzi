@@ -70,7 +70,7 @@ The browser helper selects:
 
 The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
 
-On desktop detail pages, the same helper moves Jellyfin's live `detailSectionContent` and `itemDetailsGroup` containers into the detail ribbon. This carries the overview and Show More control together, and because the helper relocates the original containers instead of copying them, Jellyfin's expansion behavior and metadata updates remain active; clients that do not load the helper retain the normal document flow.
+On desktop detail pages, the same helper moves Jellyfin's live `detailSectionContent` and `itemDetailsGroup` containers into the detail ribbon. This carries the overview and Show More control together, and because the helper relocates the original containers instead of copying them, Jellyfin's expansion behavior and metadata updates remain active. The synchronizer also replaces stale ribbon nodes when Jellyfin recreates the detail view and processes every cached detail-page instance. Clients that do not load the helper retain the normal document flow and normal season ordering.
 
 #### Jellyfin 12 episode-poster plugin
 

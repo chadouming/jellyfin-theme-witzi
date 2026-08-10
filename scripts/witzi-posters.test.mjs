@@ -367,8 +367,11 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   overview.parentNode = sectionContent;
   overviewControls.parentNode = sectionContent;
   const group = { name: 'metadata', parentNode: originalParent };
+  let sectionContents = [sectionContent];
+  let groups = [group];
   const buttons = {};
   let contentHost = null;
+  let observerCallback = null;
   const ribbon = {
     insertBefore(host, reference) {
       assert.equal(reference, buttons);
@@ -384,9 +387,14 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   const page = {
     querySelector(selector) {
       if (selector === '.detailRibbon') return ribbon;
-      if (selector === '.detailSectionContent') return sectionContent;
-      if (selector === '.itemDetailsGroup') return group;
+      if (selector === '.detailSectionContent') return sectionContents[0] || null;
+      if (selector === '.itemDetailsGroup') return groups[0] || null;
       return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '.detailSectionContent') return sectionContents;
+      if (selector === '.itemDetailsGroup') return groups;
+      return [];
     },
     removeAttribute(name) { pageAttributes.delete(name); },
     setAttribute(name, value) { pageAttributes.set(name, value); }
@@ -400,10 +408,12 @@ test('moves live overview controls and metadata into the detail ribbon', async (
         return {
           children: [],
           classList: new ClassList(),
-          appendChild(child) {
-            child.parentNode = this;
-            this.children.push(child);
-            return child;
+          contains(child) {
+            return this.children.includes(child);
+          },
+          replaceChildren(...children) {
+            this.children = children;
+            children.forEach((child) => { child.parentNode = this; });
           }
         };
       },
@@ -413,7 +423,10 @@ test('moves live overview controls and metadata into the detail ribbon', async (
       querySelectorAll() { return []; },
       addEventListener() {}
     },
-    MutationObserver: class { observe() {} },
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() {}
+    },
     setTimeout,
     clearTimeout
   };
@@ -436,6 +449,23 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   assert.equal(overview.parentNode, sectionContent);
   assert.equal(overviewControls.parentNode, sectionContent);
   assert.equal(pageAttributes.get('data-witzi-detail-content'), 'active');
+
+  const replacementOverview = { name: 'replacement-overview' };
+  const replacementSection = {
+    name: 'replacement-section',
+    children: [replacementOverview],
+    parentNode: originalParent
+  };
+  replacementOverview.parentNode = replacementSection;
+  const replacementGroup = { name: 'replacement-metadata', parentNode: originalParent };
+  sectionContents = [sectionContent, replacementSection];
+  groups = [group, replacementGroup];
+  observerCallback();
+  await waitFor(() => contentHost?.children[0] === replacementSection);
+
+  assert.deepEqual(contentHost.children, [replacementSection, replacementGroup]);
+  assert.equal(replacementSection.parentNode, contentHost);
+  assert.equal(replacementGroup.parentNode, contentHost);
 });
 
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
@@ -593,10 +623,13 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
+    /#itemDetailPage\[data-witzi-detail-content="active"\]:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
   );
+  assert.match(helper, /function detailContentCandidate\(page, host, selector\)/);
+  assert.match(helper, /candidates\.find\(\(element\) => !host\.contains\?\.\(element\)\)/);
+  assert.match(helper, /host\.replaceChildren\(\.\.\.content\)/);
   assert.match(helper, /function syncDetailRibbonContent\(\)/);
   assert.match(helper, /const content = \[sectionContent, group\]\.filter\(Boolean\);/);
-  assert.match(helper, /host\.appendChild\(element\)/);
+  assert.match(helper, /pages\.forEach\(syncDetailRibbonPage\)/);
   assert.match(helper, /setAttribute\('data-witzi-detail-content', 'active'\)/);
 });

@@ -1627,8 +1627,8 @@ a[data-role="button"]:focus-visible {
   flex-direction: column;
 }
 
-.layout-desktop #itemDetailPage:has(.nextUpSection:not(.hide)) #listChildrenCollapsible:not(.hide),
-.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem:is([data-type="Episode"], [data-type="Season"])) #listChildrenCollapsible {
+.layout-desktop #itemDetailPage[data-witzi-detail-content="active"]:has(.nextUpSection:not(.hide)) #listChildrenCollapsible:not(.hide),
+.layout-desktop #itemDetailPage[data-witzi-detail-content="active"]:has(#listChildrenCollapsible:not(.hide) .listItem:is([data-type="Episode"], [data-type="Season"])) #listChildrenCollapsible {
   margin-top: 0;
   order: -20;
 }

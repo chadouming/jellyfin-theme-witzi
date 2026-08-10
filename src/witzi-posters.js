@@ -396,11 +396,15 @@
     if (requestId === backdropState.requestId) activateBackdrop(container, url, requestId);
   }
 
-  function syncDetailRibbonContent() {
-    const page = document.querySelector?.(DETAIL_PAGE_SELECTOR);
+  function detailContentCandidate(page, host, selector) {
+    const candidates = [...(page.querySelectorAll?.(selector) || [])];
+    const outsideHost = candidates.find((element) => !host.contains?.(element));
+
+    return outsideHost || candidates[0] || page.querySelector?.(selector);
+  }
+
+  function syncDetailRibbonPage(page) {
     const ribbon = page?.querySelector?.('.detailRibbon');
-    const sectionContent = page?.querySelector?.('.detailSectionContent');
-    const group = page?.querySelector?.('.itemDetailsGroup');
     if (!page || !ribbon || typeof document.createElement !== 'function') return;
 
     let host = ribbon.querySelector?.('.witzi-ribbon-content');
@@ -410,16 +414,27 @@
       ribbon.insertBefore(host, ribbon.querySelector?.('.mainDetailButtons') || null);
     }
 
+    const sectionContent = detailContentCandidate(page, host, '.detailSectionContent');
+    const group = detailContentCandidate(page, host, '.itemDetailsGroup');
     const content = [sectionContent, group].filter(Boolean);
-    content.forEach((element) => {
-      if (element.parentNode !== host) host.appendChild(element);
-    });
+    const current = [...(host.children || [])];
+    const alreadyCurrent = current.length === content.length
+      && content.every((element, index) => current[index] === element);
+
+    if (!alreadyCurrent) host.replaceChildren(...content);
 
     if (content.length) {
       page.setAttribute('data-witzi-detail-content', 'active');
     } else {
       page.removeAttribute?.('data-witzi-detail-content');
     }
+  }
+
+  function syncDetailRibbonContent() {
+    const pages = [...(document.querySelectorAll?.(DETAIL_PAGE_SELECTOR) || [])];
+    const fallback = document.querySelector?.(DETAIL_PAGE_SELECTOR);
+    if (!pages.length && fallback) pages.push(fallback);
+    pages.forEach(syncDetailRibbonPage);
   }
 
   function syncVideoPlayback() {
