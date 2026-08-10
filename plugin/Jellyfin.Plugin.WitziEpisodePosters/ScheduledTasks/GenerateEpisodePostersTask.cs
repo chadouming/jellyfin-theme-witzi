@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -10,7 +12,6 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
 
 namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 
@@ -22,13 +23,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private const int QueryPageSize = 100;
     private const int PosterWidth = 1000;
     private const int PosterHeight = 1500;
-    private const int JpegQuality = 90;
-
     private static readonly double[] FramePositions = [0.18d, 0.50d, 0.82d];
 
     private readonly ILibraryManager _libraryManager;
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly IMediaEncoder _mediaEncoder;
+    private readonly IImageProcessor _imageProcessor;
     private readonly ILogger<GenerateEpisodePostersTask> _logger;
 
     /// <summary>
@@ -38,11 +38,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         ILibraryManager libraryManager,
         IMediaSourceManager mediaSourceManager,
         IMediaEncoder mediaEncoder,
+        IImageProcessor imageProcessor,
         ILogger<GenerateEpisodePostersTask> logger)
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
         _mediaEncoder = mediaEncoder;
+        _imageProcessor = imageProcessor;
         _logger = logger;
     }
 
@@ -61,14 +63,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     /// <inheritdoc />
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
     {
-        return
-        [
-            new TaskTriggerInfo
-            {
-                Type = TaskTriggerInfoType.DailyTrigger,
-                TimeOfDayTicks = TimeSpan.FromHours(4).Ticks
-            }
-        ];
+        return [];
     }
 
     /// <inheritdoc />
@@ -198,7 +193,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 return;
             }
 
-            WritePoster(extractedFrames, posterPath);
+            await WritePoster(extractedFrames, posterPath, cancellationToken).ConfigureAwait(false);
             await RegisterPoster(episode, posterPath, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Generated Witzi episode poster {PosterPath}", posterPath);
         }
@@ -238,12 +233,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         return image.IsLocalFile && File.Exists(image.Path) && IsPortrait(image.Path);
     }
 
-    private static bool IsPortrait(string path)
+    private bool IsPortrait(string path)
     {
         try
         {
-            using var bitmap = SKBitmap.Decode(path);
-            return bitmap is not null && bitmap.Height > bitmap.Width;
+            var dimensions = _imageProcessor.GetImageDimensions(path);
+            return dimensions.Height > dimensions.Width;
         }
         catch
         {
@@ -298,137 +293,97 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             cancellationToken);
     }
 
-    private static void WritePoster(IReadOnlyList<string> framePaths, string outputPath)
+    private async Task WritePoster(IReadOnlyList<string> framePaths, string outputPath, CancellationToken cancellationToken)
     {
-        var bitmaps = new List<SKBitmap>(framePaths.Count);
-        var temporaryPath = outputPath + ".witzi-" + Guid.NewGuid().ToString("N") + ".tmp";
+        var temporaryPath = outputPath + ".witzi-" + Guid.NewGuid().ToString("N") + ".tmp.jpg";
 
         try
         {
-            foreach (var path in framePaths)
+            if (string.IsNullOrWhiteSpace(_mediaEncoder.EncoderPath))
             {
-                var bitmap = SKBitmap.Decode(path);
-                if (bitmap is not null)
-                {
-                    bitmaps.Add(bitmap);
-                }
+                throw new InvalidOperationException("Jellyfin does not have a configured FFmpeg encoder path.");
             }
 
-            if (bitmaps.Count == 0)
-            {
-                throw new InvalidDataException("Skia could not decode any extracted frame.");
-            }
+            var selectedFrames = Enumerable.Range(0, 3)
+                .Select(index => framePaths[index % framePaths.Count])
+                .ToArray();
 
-            var imageInfo = new SKImageInfo(PosterWidth, PosterHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
-            using var surface = SKSurface.Create(imageInfo) ?? throw new InvalidOperationException("Skia could not create the poster canvas.");
-            var canvas = surface.Canvas;
-            canvas.Clear(new SKColor(30, 30, 46));
-
-            var background = bitmaps[Math.Min(1, bitmaps.Count - 1)];
-            using (var blurFilter = SKImageFilter.CreateBlur(42, 42))
-            using (var blurPaint = new SKPaint { ImageFilter = blurFilter, IsAntialias = true })
+            var startInfo = new ProcessStartInfo
             {
-                DrawCover(canvas, background, new SKRect(-35, -35, PosterWidth + 35, PosterHeight + 35), blurPaint);
-            }
-
-            canvas.DrawColor(new SKColor(24, 24, 37, 178), SKBlendMode.SrcOver);
-            DrawPaletteGlows(canvas);
-
-            var panelRects = new[]
-            {
-                new SKRect(70, 85, 930, 455),
-                new SKRect(70, 565, 930, 935),
-                new SKRect(70, 1045, 930, 1415)
-            };
-            var borderColors = new[]
-            {
-                new SKColor(203, 166, 247),
-                new SKColor(137, 180, 250),
-                new SKColor(166, 227, 161)
+                FileName = _mediaEncoder.EncoderPath,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardError = true
             };
 
-            for (var index = 0; index < panelRects.Length; index++)
+            startInfo.ArgumentList.Add("-hide_banner");
+            startInfo.ArgumentList.Add("-loglevel");
+            startInfo.ArgumentList.Add("error");
+            startInfo.ArgumentList.Add("-y");
+
+            foreach (var frame in selectedFrames)
             {
-                var rect = panelRects[index];
-                using (var shadowPaint = new SKPaint { Color = new SKColor(0, 0, 0, 115), IsAntialias = true })
-                {
-                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(rect.Left + 12, rect.Top + 16, rect.Right + 12, rect.Bottom + 16), 28, 28), shadowPaint);
-                }
-
-                canvas.Save();
-                canvas.ClipRoundRect(new SKRoundRect(rect, 28, 28), SKClipOperation.Intersect, true);
-                DrawCover(canvas, bitmaps[index % bitmaps.Count], rect, null);
-                using (var tintPaint = new SKPaint { Color = new SKColor(borderColors[index].Red, borderColors[index].Green, borderColors[index].Blue, 24) })
-                {
-                    canvas.DrawRect(rect, tintPaint);
-                }
-
-                canvas.Restore();
-
-                using var borderPaint = new SKPaint
-                {
-                    Color = borderColors[index],
-                    IsAntialias = true,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 7
-                };
-                canvas.DrawRoundRect(new SKRoundRect(rect, 28, 28), borderPaint);
+                startInfo.ArgumentList.Add("-i");
+                startInfo.ArgumentList.Add(frame);
             }
 
-            using var image = surface.Snapshot();
-            using var data = image.Encode(SKEncodedImageFormat.Jpeg, JpegQuality)
-                ?? throw new InvalidOperationException("Skia could not encode the poster as JPEG.");
-            using (var stream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            const string Filter =
+                "[1:v]scale=1000:1500:force_original_aspect_ratio=increase,crop=1000:1500,gblur=sigma=42,eq=brightness=-0.30:saturation=0.78[bg];" +
+                "[bg]drawbox=x=82:y=101:w=860:h=370:color=black@0.45:t=fill," +
+                "drawbox=x=82:y=581:w=860:h=370:color=black@0.45:t=fill," +
+                "drawbox=x=82:y=1061:w=860:h=370:color=black@0.45:t=fill[base];" +
+                "[0:v]scale=860:370:force_original_aspect_ratio=increase,crop=860:370[p0];" +
+                "[1:v]scale=860:370:force_original_aspect_ratio=increase,crop=860:370[p1];" +
+                "[2:v]scale=860:370:force_original_aspect_ratio=increase,crop=860:370[p2];" +
+                "[base][p0]overlay=70:85[v0];" +
+                "[v0]drawbox=x=70:y=85:w=860:h=370:color=0xCBA6F7@0.96:t=7[v1];" +
+                "[v1][p1]overlay=70:565[v2];" +
+                "[v2]drawbox=x=70:y=565:w=860:h=370:color=0x89B4FA@0.96:t=7[v3];" +
+                "[v3][p2]overlay=70:1045[v4];" +
+                "[v4]drawbox=x=70:y=1045:w=860:h=370:color=0xA6E3A1@0.96:t=7,format=yuvj420p[out]";
+
+            startInfo.ArgumentList.Add("-filter_complex");
+            startInfo.ArgumentList.Add(Filter);
+            startInfo.ArgumentList.Add("-map");
+            startInfo.ArgumentList.Add("[out]");
+            startInfo.ArgumentList.Add("-frames:v");
+            startInfo.ArgumentList.Add("1");
+            startInfo.ArgumentList.Add("-q:v");
+            startInfo.ArgumentList.Add("2");
+            startInfo.ArgumentList.Add(temporaryPath);
+
+            using var process = new Process { StartInfo = startInfo };
+            if (!process.Start())
             {
-                data.SaveTo(stream);
+                throw new InvalidOperationException("Jellyfin's FFmpeg process could not be started.");
+            }
+
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(true);
+                }
+
+                throw;
+            }
+
+            var error = await errorTask.ConfigureAwait(false);
+            if (process.ExitCode != 0 || !File.Exists(temporaryPath))
+            {
+                throw new InvalidOperationException($"FFmpeg poster composition failed with exit code {process.ExitCode}: {error}");
             }
 
             File.Move(temporaryPath, outputPath, false);
         }
         finally
         {
-            foreach (var bitmap in bitmaps)
-            {
-                bitmap.Dispose();
-            }
-
             TryDelete(temporaryPath);
-        }
-    }
-
-    private static void DrawCover(SKCanvas canvas, SKBitmap bitmap, SKRect destination, SKPaint? paint)
-    {
-        var scale = Math.Max(destination.Width / bitmap.Width, destination.Height / bitmap.Height);
-        var sourceWidth = destination.Width / scale;
-        var sourceHeight = destination.Height / scale;
-        var source = new SKRect(
-            (bitmap.Width - sourceWidth) / 2,
-            (bitmap.Height - sourceHeight) / 2,
-            (bitmap.Width + sourceWidth) / 2,
-            (bitmap.Height + sourceHeight) / 2);
-
-        canvas.DrawBitmap(bitmap, source, destination, paint);
-    }
-
-    private static void DrawPaletteGlows(SKCanvas canvas)
-    {
-        var glows = new[]
-        {
-            (new SKPoint(90, 240), new SKColor(203, 166, 247, 115)),
-            (new SKPoint(930, 760), new SKColor(137, 180, 250, 105)),
-            (new SKPoint(130, 1320), new SKColor(166, 227, 161, 95))
-        };
-
-        foreach (var (center, color) in glows)
-        {
-            using var shader = SKShader.CreateRadialGradient(
-                center,
-                520,
-                [color, new SKColor(color.Red, color.Green, color.Blue, 0)],
-                [0f, 1f],
-                SKShaderTileMode.Clamp);
-            using var paint = new SKPaint { Shader = shader, IsAntialias = true };
-            canvas.DrawRect(new SKRect(0, 0, PosterWidth, PosterHeight), paint);
         }
     }
 

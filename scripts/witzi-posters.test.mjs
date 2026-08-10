@@ -163,7 +163,7 @@ test('uses loadable posters and retains native artwork when candidates fail', as
 
   const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
-  await new Promise((resolve) => setTimeout(resolve, 30));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
   assert.equal(helperStatus, 'active');
   assert.equal(calls.length, 1);

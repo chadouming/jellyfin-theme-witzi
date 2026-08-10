@@ -14,9 +14,8 @@ existing portrait Primary image alone. Media folders must be writable by the
 Jellyfin server account.
 
 After installation and a server restart, run **Dashboard -> Scheduled Tasks ->
-Library -> Generate Witzi episode posters**. An incremental run is also
-scheduled daily at 04:00; episodes with an existing sidecar or portrait are
-cheaply skipped.
+Library -> Generate Witzi episode posters**. The plugin does not create an
+automatic trigger; run the task manually whenever new episodes need posters.
 
 The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC4
 packages. It is not loadable by Jellyfin 10.x.
