@@ -375,6 +375,7 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   const ribbon = {
     insertBefore(host, reference) {
       assert.equal(reference, buttons);
+      host.parentNode = this;
       contentHost = host;
     },
     querySelector(selector) {
@@ -442,6 +443,7 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   await waitFor(() => contentHost?.children.length === 2);
 
   assert.equal(contentHost.classList.contains('witzi-ribbon-content'), true);
+  assert.equal(contentHost.parentNode, ribbon);
   assert.equal(contentHost.children[0], sectionContent);
   assert.equal(contentHost.children[1], group);
   assert.equal(sectionContent.parentNode, contentHost);
@@ -532,7 +534,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid;[^}]*"content actions";[^}]*margin-top:\s*calc\(var\(--witzi-detail-rail-top\) - var\(--witzi-detail-backdrop-height\)\);[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid\s*!important;[^}]*"content actions";[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-rail-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);/s
   );
   assert.match(
     css,
@@ -611,6 +613,10 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(
     css,
     /#itemDetailPage \.itemTags,[\s\S]*#itemDetailPage \.itemExternalLinks,[\s\S]*#itemDetailPage \.itemGenres\s*\{[^}]*display:\s*none\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.mediaInfoText\.mediaInfoOfficialRating\s*\{[^}]*color:\s*inherit\s*!important;/s
   );
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(

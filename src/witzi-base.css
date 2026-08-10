@@ -1277,6 +1277,10 @@ a[data-role="button"]:focus-visible {
   color: var(--witzi-accent) !important;
 }
 
+.mediaInfoText.mediaInfoOfficialRating {
+  color: inherit !important;
+}
+
 /* Details and player surfaces. */
 .detailRibbon {
   background-color: rgb(var(--witzi-surface-rgb) / 0.88) !important;
@@ -1491,15 +1495,20 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop .detailRibbon {
+  align-content: stretch;
+  align-items: stretch;
   column-gap: clamp(0.65rem, 1.25vw, 1rem);
-  display: grid;
+  display: grid !important;
+  grid-auto-rows: auto;
   grid-template-areas:
     "info actions"
     "content actions";
   grid-template-columns: minmax(0, 1fr) auto;
-  height: auto;
-  margin-top: calc(var(--witzi-detail-rail-top) - var(--witzi-detail-backdrop-height));
+  grid-template-rows: auto auto;
+  height: auto !important;
+  margin-top: calc(var(--witzi-detail-rail-top) - var(--witzi-detail-backdrop-height)) !important;
   min-height: clamp(7.6rem, 15vh, 9rem);
+  overflow: visible;
   padding-block: 0.65rem;
   row-gap: 0.4rem;
 }
@@ -1534,6 +1543,7 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content {
+  align-self: stretch;
   display: grid;
   gap: 0.45rem;
   grid-area: content;
