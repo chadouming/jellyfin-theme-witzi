@@ -57,7 +57,7 @@ Clients can disable server-provided custom CSS in their display preferences. As 
 
 Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. The optional [`dist/witzi-posters.js`](dist/witzi-posters.js) helper uses Jellyfin's already-authenticated browser API client to select:
 
-- the season or series Primary poster for an episode;
+- the series' main Primary poster for an episode, falling back to its season/parent poster;
 - the item's own Primary poster for a movie; or
 - the native landscape artwork, contained without cropping, when no poster exists or the lookup fails.
 

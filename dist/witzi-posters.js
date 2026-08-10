@@ -4,8 +4,10 @@
  * Jellyfin builds Continue Watching and Next Up with landscape artwork. CSS
  * cannot change the API-selected image URL, so this optional helper asks the
  * current Jellyfin ApiClient for each card's metadata and swaps in a real
- * season/series poster. Movies use their own Primary poster. When no poster is
- * available, the native backdrop card is left untouched.
+ * poster. Episodes prefer the series' main Primary poster, then a season/parent
+ * poster; their own widescreen Primary capture is never used. Movies use their
+ * own Primary poster. When no inherited poster is available, the native image
+ * remains as a contained fallback.
  */
 (function witziPosterHelper() {
   'use strict';
@@ -29,17 +31,17 @@
   }
 
   function inheritedPoster(item) {
-    if (item?.ParentPrimaryImageItemId && item.ParentPrimaryImageTag) {
-      return {
-        id: item.ParentPrimaryImageItemId,
-        tag: item.ParentPrimaryImageTag
-      };
-    }
-
     if (item?.SeriesId && item.SeriesPrimaryImageTag) {
       return {
         id: item.SeriesId,
         tag: item.SeriesPrimaryImageTag
+      };
+    }
+
+    if (item?.ParentPrimaryImageItemId && item.ParentPrimaryImageTag) {
+      return {
+        id: item.ParentPrimaryImageItemId,
+        tag: item.ParentPrimaryImageTag
       };
     }
 
@@ -91,7 +93,7 @@
           if (!poster) {
             unresolvedEpisodes.push({
               id,
-              parentIds: [...new Set([item.SeasonId, item.SeriesId].filter(Boolean))]
+              parentIds: [...new Set([item.SeriesId, item.SeasonId].filter(Boolean))]
             });
             continue;
           }

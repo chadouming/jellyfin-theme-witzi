@@ -45,6 +45,8 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
         {
           Id: 'episode-inherited',
           Type: 'Episode',
+          SeriesId: 'series-1',
+          SeriesPrimaryImageTag: 'series-tag',
           ParentPrimaryImageItemId: 'season-1',
           ParentPrimaryImageTag: 'season-tag'
         },
@@ -62,6 +64,11 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
         {
           Id: 'episode-no-poster',
           Type: 'Episode'
+        },
+        {
+          Id: 'series-2',
+          Type: 'Series',
+          ImageTags: { Primary: 'series-2-tag' }
         },
         {
           Id: 'season-2',
@@ -101,13 +108,16 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
 
   assert.equal(calls.length, 2);
   assert.match(calls[0], /episode-inherited/);
-  assert.equal(calls[1], 'season-2,series-2');
+  assert.equal(calls[1], 'series-2,season-2');
 
   for (const card of cards.slice(0, 3)) {
     assert.equal(card.dataset.witziArtwork, 'poster');
     assert.equal(card.classList.contains('witzi-poster-card'), true);
     assert.match(card.image.getAttribute('data-src'), /\/Images\/Primary/);
   }
+
+  assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
+  assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/series-2\/Images\/Primary/);
 
   const fallback = cards[3];
   assert.equal(fallback.dataset.witziArtwork, 'backdrop');
@@ -132,5 +142,6 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
+  assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);
 });
