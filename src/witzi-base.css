@@ -1294,7 +1294,7 @@ a[data-role="button"]:focus-visible {
 }
 
 /*
- * Desktop detail artwork is one anchored rail: the logo sits above a smaller
+ * Desktop detail artwork is one anchored rail: the logo sits above a prominent
  * poster while the ribbon, metadata, episode list, and secondary sections use
  * Jellyfin's normal page scroll. Mobile and TV keep their native document flow.
  */
@@ -1302,13 +1302,13 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
   --witzi-detail-rail-edge: clamp(1rem, 3.3vw, 3.5rem);
   --witzi-detail-rail-gap: clamp(1rem, 1.8vw, 1.6rem);
-  --witzi-detail-rail-width: clamp(8rem, min(17vw, 30vh), 14rem);
-  --witzi-detail-poster-height: clamp(12rem, min(25.5vw, 45vh), 21rem);
+  --witzi-detail-rail-width: clamp(12rem, min(25.5vw, 36vh), 21rem);
+  --witzi-detail-poster-height: calc(var(--witzi-detail-rail-width) * 1.5);
   --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.55rem, 1.2vh, 0.9rem));
-  --witzi-detail-logo-gap: 0.35rem;
-  --witzi-detail-logo-height: clamp(2.25rem, 5.5vh, 3.5rem);
+  --witzi-detail-logo-gap: 0.5rem;
+  --witzi-detail-logo-height: clamp(3.375rem, 8.25vh, 5.25rem);
   --witzi-detail-poster-top: calc(var(--witzi-detail-rail-top) + var(--witzi-detail-logo-height) + var(--witzi-detail-logo-gap));
-  --witzi-detail-next-up-top: calc(var(--witzi-detail-poster-top) + var(--witzi-detail-poster-height) + 0.65rem);
+  --witzi-detail-next-up-top: calc(var(--witzi-detail-poster-top) + var(--witzi-detail-poster-height) + 1rem);
   --witzi-detail-content-start: calc(var(--witzi-detail-rail-edge) + var(--witzi-detail-rail-width) + var(--witzi-detail-rail-gap));
 }
 
@@ -1458,10 +1458,10 @@ a[data-role="button"]:focus-visible {
   display: grid;
   grid-template-areas:
     "info actions"
-    "metadata actions";
+    "content actions";
   grid-template-columns: minmax(0, 1fr) auto;
   height: auto;
-  margin-top: calc(var(--witzi-detail-poster-top) - var(--witzi-detail-backdrop-height));
+  margin-top: calc(var(--witzi-detail-rail-top) - var(--witzi-detail-backdrop-height));
   min-height: clamp(7.6rem, 15vh, 9rem);
   padding-block: 0.65rem;
   row-gap: 0.4rem;
@@ -1496,20 +1496,49 @@ a[data-role="button"]:focus-visible {
   margin-block: 0.55rem 0.25rem;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-metadata {
+.layout-desktop #itemDetailPage .witzi-ribbon-content {
+  display: grid;
+  gap: 0.45rem;
+  grid-area: content;
+  min-width: 0;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content:empty {
+  display: none;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content .overview {
+  font-size: clamp(0.82rem, 1vw, 0.94rem);
+  line-height: 1.42;
+  margin: 0;
+  max-width: 72rem;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content .overview-controls {
+  justify-content: flex-start;
+  margin-top: -0.2rem;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content .overview-expand {
+  color: var(--witzi-accent) !important;
+  font-size: 0.78rem;
+  padding: 0.1rem 0 !important;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 0.9rem;
-  grid-area: metadata;
+  margin: 0;
   min-width: 0;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-metadata:empty {
+.layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup > div:empty {
   display: none;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-metadata .detailsGroupItem {
+.layout-desktop #itemDetailPage .witzi-ribbon-content .detailsGroupItem {
   align-items: center;
   display: flex;
   gap: 0.35rem;
@@ -1517,7 +1546,7 @@ a[data-role="button"]:focus-visible {
   max-width: min(100%, 32rem);
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-metadata .detailsGroupItem .label {
+.layout-desktop #itemDetailPage .witzi-ribbon-content .detailsGroupItem .label {
   color: var(--witzi-muted);
   flex: 0 0 auto;
   font-size: 0.72rem;
@@ -1527,14 +1556,14 @@ a[data-role="button"]:focus-visible {
   text-transform: uppercase;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-metadata .focuscontainer-x {
+.layout-desktop #itemDetailPage .witzi-ribbon-content .focuscontainer-x {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
   min-width: 0;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-metadata .button-link {
+.layout-desktop #itemDetailPage .witzi-ribbon-content .button-link {
   background: var(--witzi-accent-dim);
   border: 1px solid rgb(var(--witzi-accent-rgb) / 0.32);
   border-radius: 999px;
@@ -1546,11 +1575,6 @@ a[data-role="button"]:focus-visible {
 #itemDetailPage .itemTags,
 #itemDetailPage .itemExternalLinks,
 #itemDetailPage .itemGenres {
-  display: none !important;
-}
-
-#itemDetailPage[data-witzi-detail-metadata="active"] .itemDetailsGroup > :nth-child(5),
-#itemDetailPage[data-witzi-detail-metadata="active"] .itemDetailsGroup > :nth-child(6) {
   display: none !important;
 }
 

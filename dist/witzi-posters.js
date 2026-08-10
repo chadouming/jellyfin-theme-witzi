@@ -396,41 +396,30 @@
     if (requestId === backdropState.requestId) activateBackdrop(container, url, requestId);
   }
 
-  function detailMetadataSources(group) {
-    const renderTargets = [...(group?.children || [])];
-
-    return [renderTargets[4], renderTargets[5]]
-      .map((target) => target?.querySelector?.('.detailsGroupItem'))
-      .filter((source) => source?.textContent?.trim());
-  }
-
-  function syncDetailRibbonMetadata() {
+  function syncDetailRibbonContent() {
     const page = document.querySelector?.(DETAIL_PAGE_SELECTOR);
     const ribbon = page?.querySelector?.('.detailRibbon');
+    const overview = page?.querySelector?.('.overview');
+    const overviewControls = page?.querySelector?.('.overview-controls');
     const group = page?.querySelector?.('.itemDetailsGroup');
-    if (!page || !ribbon || !group || typeof document.createElement !== 'function') return;
+    if (!page || !ribbon || typeof document.createElement !== 'function') return;
 
-    let host = ribbon.querySelector?.('.witzi-ribbon-metadata');
+    let host = ribbon.querySelector?.('.witzi-ribbon-content');
     if (!host) {
       host = document.createElement('div');
-      host.classList.add('witzi-ribbon-metadata');
+      host.classList.add('witzi-ribbon-content');
       ribbon.insertBefore(host, ribbon.querySelector?.('.mainDetailButtons') || null);
     }
 
-    const sources = detailMetadataSources(group);
-    const signature = sources
-      .map((source) => source.innerHTML || source.textContent || '')
-      .join('\u001f');
+    const content = [overview, overviewControls, group].filter(Boolean);
+    content.forEach((element) => {
+      if (element.parentNode !== host) host.appendChild(element);
+    });
 
-    if (host.dataset.witziMetadataSignature !== signature) {
-      host.replaceChildren(...sources.map((source) => source.cloneNode(true)));
-      host.dataset.witziMetadataSignature = signature;
-    }
-
-    if (sources.length) {
-      page.setAttribute('data-witzi-detail-metadata', 'active');
+    if (content.length) {
+      page.setAttribute('data-witzi-detail-content', 'active');
     } else {
-      page.removeAttribute?.('data-witzi-detail-metadata');
+      page.removeAttribute?.('data-witzi-detail-content');
     }
   }
 
@@ -452,7 +441,7 @@
     window.requestAnimationFrame(() => {
       scheduled = false;
       syncVideoPlayback();
-      syncDetailRibbonMetadata();
+      syncDetailRibbonContent();
       void processCards();
       void processBackdrop();
     });

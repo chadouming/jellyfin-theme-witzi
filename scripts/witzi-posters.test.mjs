@@ -355,27 +355,20 @@ test('keeps the current backdrop visible until a newer backdrop is ready', async
   assert.equal(documentAttributes.has('data-witzi-video-active'), false);
 });
 
-test('mirrors studio and genre metadata into the detail ribbon', async () => {
-  const metadataSources = ['Studio: Witzi Works', 'Genre: Animation'].map((text, index) => ({
-    innerHTML: `<span>${text}</span>`,
-    textContent: text,
-    cloneNode() { return { cloneOf: index, textContent: text }; }
-  }));
-  const renderTargets = Array.from({ length: 6 }, (_, index) => ({
-    querySelector(selector) {
-      return selector === '.detailsGroupItem' ? metadataSources[index - 4] || null : null;
-    }
-  }));
-  const group = { children: renderTargets };
+test('moves live overview controls and metadata into the detail ribbon', async () => {
+  const originalParent = {};
+  const overview = { name: 'overview', parentNode: originalParent };
+  const overviewControls = { name: 'controls', parentNode: originalParent };
+  const group = { name: 'metadata', parentNode: originalParent };
   const buttons = {};
-  let metadataHost = null;
+  let contentHost = null;
   const ribbon = {
     insertBefore(host, reference) {
       assert.equal(reference, buttons);
-      metadataHost = host;
+      contentHost = host;
     },
     querySelector(selector) {
-      if (selector === '.witzi-ribbon-metadata') return metadataHost;
+      if (selector === '.witzi-ribbon-content') return contentHost;
       if (selector === '.mainDetailButtons') return buttons;
       return null;
     }
@@ -384,6 +377,8 @@ test('mirrors studio and genre metadata into the detail ribbon', async () => {
   const page = {
     querySelector(selector) {
       if (selector === '.detailRibbon') return ribbon;
+      if (selector === '.overview') return overview;
+      if (selector === '.overview-controls') return overviewControls;
       if (selector === '.itemDetailsGroup') return group;
       return null;
     },
@@ -399,8 +394,11 @@ test('mirrors studio and genre metadata into the detail ribbon', async () => {
         return {
           children: [],
           classList: new ClassList(),
-          dataset: {},
-          replaceChildren(...children) { this.children = children; }
+          appendChild(child) {
+            child.parentNode = this;
+            this.children.push(child);
+            return child;
+          }
         };
       },
       querySelector(selector) {
@@ -422,12 +420,16 @@ test('mirrors studio and genre metadata into the detail ribbon', async () => {
 
   const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
-  await waitFor(() => metadataHost?.children.length === 2);
+  await waitFor(() => contentHost?.children.length === 3);
 
-  assert.equal(metadataHost.classList.contains('witzi-ribbon-metadata'), true);
-  assert.deepEqual(metadataHost.children.map((child) => child.cloneOf), [0, 1]);
-  assert.equal(pageAttributes.get('data-witzi-detail-metadata'), 'active');
-  assert.equal(renderTargets.length, 6);
+  assert.equal(contentHost.classList.contains('witzi-ribbon-content'), true);
+  assert.equal(contentHost.children[0], overview);
+  assert.equal(contentHost.children[1], overviewControls);
+  assert.equal(contentHost.children[2], group);
+  assert.equal(overview.parentNode, contentHost);
+  assert.equal(overviewControls.parentNode, contentHost);
+  assert.equal(group.parentNode, contentHost);
+  assert.equal(pageAttributes.get('data-witzi-detail-content'), 'active');
 });
 
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
@@ -494,7 +496,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\);[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid;[^}]*"content actions";[^}]*margin-top:\s*calc\(var\(--witzi-detail-rail-top\) - var\(--witzi-detail-backdrop-height\)\);[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);/s
   );
   assert.match(
     css,
@@ -519,7 +521,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(8rem, min\(17vw, 30vh\), 14rem\);[^}]*--witzi-detail-poster-height:\s*clamp\(12rem, min\(25\.5vw, 45vh\), 21rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(2\.25rem, 5\.5vh, 3\.5rem\);[^}]*--witzi-detail-next-up-top:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-logo-height:\s*clamp\(3\.375rem, 8\.25vh, 5\.25rem\);[^}]*--witzi-detail-next-up-top:/s
   );
   assert.doesNotMatch(
     css,
@@ -566,16 +568,17 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     css,
     /#itemDetailPage \.itemTags,[\s\S]*#itemDetailPage \.itemExternalLinks,[\s\S]*#itemDetailPage \.itemGenres\s*\{[^}]*display:\s*none\s*!important;/s
   );
+  assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
-    /#itemDetailPage\[data-witzi-detail-metadata="active"\] \.itemDetailsGroup > :nth-child\(5\),[\s\S]*:nth-child\(6\)\s*\{[^}]*display:\s*none\s*!important;/s
+    /\.witzi-ribbon-content \.itemDetailsGroup\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*margin:\s*0;/s
   );
   assert.match(
     css,
     /#itemDetailPage:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
   );
-  assert.match(helper, /function syncDetailRibbonMetadata\(\)/);
-  assert.match(helper, /\[renderTargets\[4\], renderTargets\[5\]\]/);
-  assert.match(helper, /source\.cloneNode\(true\)/);
-  assert.match(helper, /setAttribute\('data-witzi-detail-metadata', 'active'\)/);
+  assert.match(helper, /function syncDetailRibbonContent\(\)/);
+  assert.match(helper, /const content = \[overview, overviewControls, group\]\.filter\(Boolean\);/);
+  assert.match(helper, /host\.appendChild\(element\)/);
+  assert.match(helper, /setAttribute\('data-witzi-detail-content', 'active'\)/);
 });
