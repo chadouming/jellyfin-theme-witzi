@@ -1400,12 +1400,47 @@ a[data-role="button"]:focus-visible {
   white-space: nowrap;
 }
 
+/* Movies reuse the lower rail slot for their live playback track selectors. */
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) {
+  align-content: start;
+  background-color: rgb(var(--witzi-surface-rgb) / 0.88);
+  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 58%);
+  border: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-radius: var(--witzi-radius-md);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  box-sizing: border-box;
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 !important;
+  max-height: calc(100vh - var(--witzi-detail-next-up-top) - 0.75rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.65rem !important;
+  position: fixed;
+  top: var(--witzi-detail-next-up-top);
+  width: var(--witzi-detail-rail-width);
+  z-index: 4;
+}
+
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .trackSelectionFieldContainer:not(.hide) {
+  margin: 0;
+  max-width: none;
+  min-width: 0;
+  width: 100%;
+}
+
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .detailTrackSelect {
+  width: 100%;
+}
+
 .layout-desktop[dir="ltr"] #itemDetailPage .detailLogo,
 .layout-desktop [dir="ltr"] #itemDetailPage .detailLogo,
 .layout-desktop[dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop [dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop[dir="ltr"] #itemDetailPage .nextUpSection:not(.hide),
-.layout-desktop [dir="ltr"] #itemDetailPage .nextUpSection:not(.hide) {
+.layout-desktop [dir="ltr"] #itemDetailPage .nextUpSection:not(.hide),
+.layout-desktop[dir="ltr"] #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide),
+.layout-desktop [dir="ltr"] #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) {
   left: var(--witzi-detail-rail-edge) !important;
   right: auto;
 }
@@ -1415,7 +1450,9 @@ a[data-role="button"]:focus-visible {
 .layout-desktop[dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop [dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop[dir="rtl"] #itemDetailPage .nextUpSection:not(.hide),
-.layout-desktop [dir="rtl"] #itemDetailPage .nextUpSection:not(.hide) {
+.layout-desktop [dir="rtl"] #itemDetailPage .nextUpSection:not(.hide),
+.layout-desktop[dir="rtl"] #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide),
+.layout-desktop [dir="rtl"] #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) {
   left: auto;
   right: var(--witzi-detail-rail-edge) !important;
 }
@@ -1505,6 +1542,13 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content:empty {
   display: none;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  min-width: 0;
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .overview {

@@ -357,8 +357,15 @@ test('keeps the current backdrop visible until a newer backdrop is ready', async
 
 test('moves live overview controls and metadata into the detail ribbon', async () => {
   const originalParent = {};
-  const overview = { name: 'overview', parentNode: originalParent };
-  const overviewControls = { name: 'controls', parentNode: originalParent };
+  const overview = { name: 'overview' };
+  const overviewControls = { name: 'controls' };
+  const sectionContent = {
+    name: 'section-content',
+    children: [overview, overviewControls],
+    parentNode: originalParent
+  };
+  overview.parentNode = sectionContent;
+  overviewControls.parentNode = sectionContent;
   const group = { name: 'metadata', parentNode: originalParent };
   const buttons = {};
   let contentHost = null;
@@ -377,8 +384,7 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   const page = {
     querySelector(selector) {
       if (selector === '.detailRibbon') return ribbon;
-      if (selector === '.overview') return overview;
-      if (selector === '.overview-controls') return overviewControls;
+      if (selector === '.detailSectionContent') return sectionContent;
       if (selector === '.itemDetailsGroup') return group;
       return null;
     },
@@ -420,15 +426,15 @@ test('moves live overview controls and metadata into the detail ribbon', async (
 
   const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
-  await waitFor(() => contentHost?.children.length === 3);
+  await waitFor(() => contentHost?.children.length === 2);
 
   assert.equal(contentHost.classList.contains('witzi-ribbon-content'), true);
-  assert.equal(contentHost.children[0], overview);
-  assert.equal(contentHost.children[1], overviewControls);
-  assert.equal(contentHost.children[2], group);
-  assert.equal(overview.parentNode, contentHost);
-  assert.equal(overviewControls.parentNode, contentHost);
+  assert.equal(contentHost.children[0], sectionContent);
+  assert.equal(contentHost.children[1], group);
+  assert.equal(sectionContent.parentNode, contentHost);
   assert.equal(group.parentNode, contentHost);
+  assert.equal(overview.parentNode, sectionContent);
+  assert.equal(overviewControls.parentNode, sectionContent);
   assert.equal(pageAttributes.get('data-witzi-detail-content'), 'active');
 });
 
@@ -549,6 +555,14 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
+    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\) \.trackSelections:not\(\.hide\)\s*\{[^}]*display:\s*grid;[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-next-up-top\);[^}]*width:\s*var\(--witzi-detail-rail-width\);/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\) \.trackSelections:not\(\.hide\) \.trackSelectionFieldContainer:not\(\.hide\)\s*\{[^}]*width:\s*100%;/s
+  );
+  assert.match(
+    css,
     /#itemDetailPage \.detailPagePrimaryContent,[\s\S]*#itemDetailPage \.detailPageSecondaryContainer\s*\{[^}]*padding-left:\s*var\(--witzi-detail-content-start\);/s
   );
   assert.match(
@@ -571,6 +585,10 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
+    /\.witzi-ribbon-content \.detailSectionContent\s*\{[^}]*display:\s*grid;[^}]*margin:\s*0;/s
+  );
+  assert.match(
+    css,
     /\.witzi-ribbon-content \.itemDetailsGroup\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*margin:\s*0;/s
   );
   assert.match(
@@ -578,7 +596,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     /#itemDetailPage:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
   );
   assert.match(helper, /function syncDetailRibbonContent\(\)/);
-  assert.match(helper, /const content = \[overview, overviewControls, group\]\.filter\(Boolean\);/);
+  assert.match(helper, /const content = \[sectionContent, group\]\.filter\(Boolean\);/);
   assert.match(helper, /host\.appendChild\(element\)/);
   assert.match(helper, /setAttribute\('data-witzi-detail-content', 'active'\)/);
 });

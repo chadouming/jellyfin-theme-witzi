@@ -15,7 +15,7 @@ The default is Catppuccin Mocha. Six matching variants are included:
 | Dracula | Gothic violet and pink | `dist/witzi-dracula.css` |
 | Gruvbox | Warm retro gold and orange | `dist/witzi-gruvbox.css` |
 
-Desktop detail pages use a fixed, viewport-aware artwork rail: the enlarged media logo sits above a prominent poster matched to the episode-frame width, and Series pages place one enlarged landscape Next Up card below it. The information ribbon begins at the top content edge and contains the title, action buttons, overview, Show More control, and complete item metadata group; Series and Season lists start directly below it, while remaining movie information follows in the same scrolling column. Keyword tags and external database links are hidden.
+Desktop detail pages use a fixed, viewport-aware artwork rail: the enlarged media logo sits above a prominent poster matched to the episode-frame width. Series pages place one enlarged landscape Next Up card below it, while movies use that lower rail slot for stacked Video, Audio, and Subtitles selectors. The information ribbon begins at the top content edge and contains the title, action buttons, overview, Show More control, and complete item metadata group; Series and Season lists start directly below it, while remaining movie information follows in the same scrolling column. Keyword tags and external database links are hidden.
 
 ## Install
 
@@ -70,7 +70,7 @@ The browser helper selects:
 
 The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
 
-On desktop detail pages, the same helper moves Jellyfin's live overview, Show More control, and full metadata group into the detail ribbon. Because it relocates the original elements instead of copying them, Jellyfin's expansion behavior and metadata updates remain active; clients that do not load the helper retain the normal document flow.
+On desktop detail pages, the same helper moves Jellyfin's live `detailSectionContent` and `itemDetailsGroup` containers into the detail ribbon. This carries the overview and Show More control together, and because the helper relocates the original containers instead of copying them, Jellyfin's expansion behavior and metadata updates remain active; clients that do not load the helper retain the normal document flow.
 
 #### Jellyfin 12 episode-poster plugin
 

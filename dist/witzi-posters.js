@@ -399,8 +399,7 @@
   function syncDetailRibbonContent() {
     const page = document.querySelector?.(DETAIL_PAGE_SELECTOR);
     const ribbon = page?.querySelector?.('.detailRibbon');
-    const overview = page?.querySelector?.('.overview');
-    const overviewControls = page?.querySelector?.('.overview-controls');
+    const sectionContent = page?.querySelector?.('.detailSectionContent');
     const group = page?.querySelector?.('.itemDetailsGroup');
     if (!page || !ribbon || typeof document.createElement !== 'function') return;
 
@@ -411,7 +410,7 @@
       ribbon.insertBefore(host, ribbon.querySelector?.('.mainDetailButtons') || null);
     }
 
-    const content = [overview, overviewControls, group].filter(Boolean);
+    const content = [sectionContent, group].filter(Boolean);
     content.forEach((element) => {
       if (element.parentNode !== host) host.appendChild(element);
     });
