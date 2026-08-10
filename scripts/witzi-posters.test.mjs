@@ -443,6 +443,18 @@ test('compacts episode rows and separates the ribbon from detail artwork', async
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage \.detailLogo\s*\{[^}]*background-size:\s*80% auto;[^}]*top:\s*calc\(var\(--witzi-detail-backdrop-height\) - var\(--witzi-detail-poster-lift\)/s
+    /\.layout-desktop #itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\)\s*\{[^}]*--witzi-detail-backdrop-height:\s*clamp\(15rem, 30vh, 20rem\);[^}]*--witzi-detail-logo-height:/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) \.detailLogo\s*\{[^}]*background-size:\s*76% auto;[^}]*height:\s*var\(--witzi-detail-logo-height\);[^}]*top:\s*calc\(var\(--witzi-detail-backdrop-height\) - var\(--witzi-detail-poster-lift\) - var\(--witzi-detail-logo-height\) - var\(--witzi-detail-logo-gap\)\);/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) \.detailSectionContent \.overview\s*\{[^}]*-webkit-line-clamp:\s*3;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) #listChildrenCollapsible\s*\{[^}]*margin-top:\s*-0\.35rem;/s
   );
 });

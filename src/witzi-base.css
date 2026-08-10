@@ -1293,41 +1293,73 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-ribbon-inner-padding: clamp(1rem, 3.3vw, 3.5rem);
 }
 
-/*
- * Put transparent media logos over the upper portion of the detail poster.
- * With the logo no longer occupying the backdrop composition, the shorter
- * backdrop brings the ribbon, description, and episode list higher on screen.
- */
+/* Keep detail artwork compact without changing Jellyfin's mobile/TV flow. */
 .layout-desktop #itemDetailPage {
   --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
   --witzi-detail-poster-lift: 12.96em;
+}
+
+/*
+ * Season pages place their transparent logo immediately above the poster.
+ * Their shorter backdrop and denser synopsis block bring episodes up
+ * without changing the compact landscape episode cards themselves.
+ */
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) {
+  --witzi-detail-backdrop-height: clamp(15rem, 30vh, 20rem);
+  --witzi-detail-logo-gap: 0.4rem;
+  --witzi-detail-logo-height: clamp(2.5rem, 4vh, 3rem);
 }
 
 .layout-desktop #itemDetailPage .itemBackdrop {
   height: var(--witzi-detail-backdrop-height);
 }
 
-.layout-desktop #itemDetailPage .detailLogo {
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
   background-position: center center;
-  background-size: 80% auto;
+  background-size: 76% auto;
   filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.76));
-  height: clamp(3.5rem, 7vw, 7.5rem);
+  height: var(--witzi-detail-logo-height);
   pointer-events: none;
-  top: calc(var(--witzi-detail-backdrop-height) - var(--witzi-detail-poster-lift) + clamp(0.7rem, 1.2vw, 1.25rem));
+  top: calc(var(--witzi-detail-backdrop-height) - var(--witzi-detail-poster-lift) - var(--witzi-detail-logo-height) - var(--witzi-detail-logo-gap));
   width: 25vw;
   z-index: 4;
 }
 
-.layout-desktop[dir="ltr"] #itemDetailPage .detailLogo,
-.layout-desktop [dir="ltr"] #itemDetailPage .detailLogo {
+.layout-desktop[dir="ltr"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo,
+.layout-desktop [dir="ltr"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
   left: 3.3vw;
   right: auto;
 }
 
-.layout-desktop[dir="rtl"] #itemDetailPage .detailLogo,
-.layout-desktop [dir="rtl"] #itemDetailPage .detailLogo {
+.layout-desktop[dir="rtl"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo,
+.layout-desktop [dir="rtl"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
   left: auto;
   right: 3.3vw;
+}
+
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailPagePrimaryContent {
+  padding-top: 0.7rem;
+}
+
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailSectionContent .overview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .itemDetailsGroup {
+  margin-top: 0.75rem;
+}
+
+.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) #listChildrenCollapsible {
+  margin-top: -0.35rem;
+}
+
+@media (max-height: 64rem) {
+  .layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
+    display: none !important;
+  }
 }
 
 .layout-desktop .detailRibbon {
