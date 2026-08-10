@@ -414,9 +414,11 @@
       ribbon.insertBefore(host, ribbon.querySelector?.('.mainDetailButtons') || null);
     }
 
+    const info = detailContentCandidate(page, host, '.infoWrapper');
+    const buttons = detailContentCandidate(page, host, '.mainDetailButtons');
     const sectionContent = detailContentCandidate(page, host, '.detailSectionContent');
     const group = detailContentCandidate(page, host, '.itemDetailsGroup');
-    const content = [sectionContent, group].filter(Boolean);
+    const content = [info, buttons, sectionContent, group].filter(Boolean);
     const current = [...(host.children || [])];
     const alreadyCurrent = current.length === content.length
       && content.every((element, index) => current[index] === element);

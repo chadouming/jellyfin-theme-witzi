@@ -355,8 +355,10 @@ test('keeps the current backdrop visible until a newer backdrop is ready', async
   assert.equal(documentAttributes.has('data-witzi-video-active'), false);
 });
 
-test('moves live overview controls and metadata into the detail ribbon', async () => {
+test('moves all live detail content into one ribbon panel', async () => {
   const originalParent = {};
+  const info = { name: 'info', parentNode: originalParent };
+  const buttons = { name: 'buttons', parentNode: originalParent };
   const overview = { name: 'overview' };
   const overviewControls = { name: 'controls' };
   const sectionContent = {
@@ -367,9 +369,10 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   overview.parentNode = sectionContent;
   overviewControls.parentNode = sectionContent;
   const group = { name: 'metadata', parentNode: originalParent };
+  let infos = [info];
+  let buttonGroups = [buttons];
   let sectionContents = [sectionContent];
   let groups = [group];
-  const buttons = {};
   let contentHost = null;
   let observerCallback = null;
   const ribbon = {
@@ -388,11 +391,15 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   const page = {
     querySelector(selector) {
       if (selector === '.detailRibbon') return ribbon;
+      if (selector === '.infoWrapper') return infos[0] || null;
+      if (selector === '.mainDetailButtons') return buttonGroups[0] || null;
       if (selector === '.detailSectionContent') return sectionContents[0] || null;
       if (selector === '.itemDetailsGroup') return groups[0] || null;
       return null;
     },
     querySelectorAll(selector) {
+      if (selector === '.infoWrapper') return infos;
+      if (selector === '.mainDetailButtons') return buttonGroups;
       if (selector === '.detailSectionContent') return sectionContents;
       if (selector === '.itemDetailsGroup') return groups;
       return [];
@@ -440,12 +447,16 @@ test('moves live overview controls and metadata into the detail ribbon', async (
 
   const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
-  await waitFor(() => contentHost?.children.length === 2);
+  await waitFor(() => contentHost?.children.length === 4);
 
   assert.equal(contentHost.classList.contains('witzi-ribbon-content'), true);
   assert.equal(contentHost.parentNode, ribbon);
-  assert.equal(contentHost.children[0], sectionContent);
-  assert.equal(contentHost.children[1], group);
+  assert.equal(contentHost.children[0], info);
+  assert.equal(contentHost.children[1], buttons);
+  assert.equal(contentHost.children[2], sectionContent);
+  assert.equal(contentHost.children[3], group);
+  assert.equal(info.parentNode, contentHost);
+  assert.equal(buttons.parentNode, contentHost);
   assert.equal(sectionContent.parentNode, contentHost);
   assert.equal(group.parentNode, contentHost);
   assert.equal(overview.parentNode, sectionContent);
@@ -460,12 +471,18 @@ test('moves live overview controls and metadata into the detail ribbon', async (
   };
   replacementOverview.parentNode = replacementSection;
   const replacementGroup = { name: 'replacement-metadata', parentNode: originalParent };
+  const replacementInfo = { name: 'replacement-info', parentNode: originalParent };
+  const replacementButtons = { name: 'replacement-buttons', parentNode: originalParent };
+  infos = [info, replacementInfo];
+  buttonGroups = [buttons, replacementButtons];
   sectionContents = [sectionContent, replacementSection];
   groups = [group, replacementGroup];
   observerCallback();
-  await waitFor(() => contentHost?.children[0] === replacementSection);
+  await waitFor(() => contentHost?.children[0] === replacementInfo);
 
-  assert.deepEqual(contentHost.children, [replacementSection, replacementGroup]);
+  assert.deepEqual(contentHost.children, [replacementInfo, replacementButtons, replacementSection, replacementGroup]);
+  assert.equal(replacementInfo.parentNode, contentHost);
+  assert.equal(replacementButtons.parentNode, contentHost);
   assert.equal(replacementSection.parentNode, contentHost);
   assert.equal(replacementGroup.parentNode, contentHost);
 });
@@ -534,7 +551,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid\s*!important;[^}]*"content content";[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0\.65rem 0;/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*block\s*!important;[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0;/s
   );
   assert.match(
     css,
@@ -559,7 +576,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-top-padding:\s*clamp\(0\.45rem, 0\.8vh, 0\.7rem\);[^}]*--witzi-detail-rail-top:\s*calc\(var\(--witzi-header-height\) \+ var\(--witzi-detail-top-padding\)\);[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);[^}]*--witzi-detail-next-up-top:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-top-padding:\s*clamp\(0\.65rem, 1vh, 0\.9rem\);[^}]*--witzi-detail-rail-top:\s*calc\(var\(--witzi-header-height\) \+ var\(--witzi-detail-top-padding\)\);[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);[^}]*--witzi-detail-next-up-top:/s
   );
   assert.match(
     css,
@@ -616,6 +633,14 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
+    /:is\(\.detailPagePrimaryContent, \.detailPageSecondaryContainer\) \.horizontalSection\s*\{[^}]*margin-inline:\s*0\s*!important;[^}]*overflow-x:\s*clip;[^}]*width:\s*100%;/s
+  );
+  assert.match(
+    css,
+    /:is\(\.detailPagePrimaryContent, \.detailPageSecondaryContainer\) \.emby-scroller\s*\{[^}]*margin-inline:\s*0\s*!important;[^}]*overflow-x:\s*auto;[^}]*overscroll-behavior-inline:\s*contain;[^}]*width:\s*100%\s*!important;/s
+  );
+  assert.match(
+    css,
     /\.layout-desktop #itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\)\s*\{[^}]*--witzi-detail-backdrop-height:\s*clamp\(15rem, 30vh, 20rem\);/s
   );
   assert.doesNotMatch(css, /max-height:\s*64rem/);
@@ -639,18 +664,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     css,
     /\.mediaInfoText\.mediaInfoOfficialRating\s*\{[^}]*color:\s*inherit\s*!important;/s
   );
-  assert.match(
-    css,
-    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailRibbon\s*\{[^}]*border-bottom:\s*0;[^}]*border-bottom-left-radius:\s*0;/s
-  );
-  assert.match(
-    css,
-    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailSectionContent,[\s\S]*#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*border-left:[^}]*margin:\s*0\s*!important;[^}]*max-width:\s*100%\s*!important;[^}]*overflow:\s*hidden;[^}]*width:\s*100%\s*!important;/s
-  );
-  assert.match(
-    css,
-    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*border-bottom:[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;/s
-  );
+  assert.doesNotMatch(css, /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailRibbon/);
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
@@ -662,16 +676,17 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.witzi-ribbon-content\s*\{[^}]*gap:\s*0\.12rem;[^}]*max-width:\s*100%;[^}]*overflow:\s*hidden;[^}]*width:\s*100%;/s
+    /\.witzi-ribbon-content\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*gap:\s*0\.12rem;[^}]*max-width:\s*100%;[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0\.65rem 0;[^}]*width:\s*100%;/s
+  );
+  assert.match(
+    css,
+    /\.witzi-ribbon-content > :is\(\.infoWrapper, \.mainDetailButtons, \.detailSectionContent, \.itemDetailsGroup\)\s*\{[^}]*background-color:\s*transparent\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*flex:\s*0 0 auto;[^}]*width:\s*100%\s*!important;/s
   );
   assert.match(
     css,
     /\.itemDetailsGroup > \.MuiBox-root\.css-0,[\s\S]*\.itemDetailsGroup \.detailsGroupItem\.MuiBox-root\.css-0\s*\{[^}]*width:\s*100%;/s
   );
-  assert.match(
-    css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*align-content:\s*start;[^}]*row-gap:\s*0\.15rem;/s
-  );
+  assert.doesNotMatch(css, /\.layout-desktop \.detailRibbon\s*\{[^}]*grid-template-areas:/s);
   assert.match(
     css,
     /\.detailRibbon \.infoWrapper \.itemMiscInfo\s*\{[^}]*margin-bottom:\s*0\.15rem\s*!important;/s
@@ -684,7 +699,9 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(helper, /candidates\.find\(\(element\) => !host\.contains\?\.\(element\)\)/);
   assert.match(helper, /host\.replaceChildren\(\.\.\.content\)/);
   assert.match(helper, /function syncDetailRibbonContent\(\)/);
-  assert.match(helper, /const content = \[sectionContent, group\]\.filter\(Boolean\);/);
+  assert.match(helper, /const info = detailContentCandidate\(page, host, '\.infoWrapper'\);/);
+  assert.match(helper, /const buttons = detailContentCandidate\(page, host, '\.mainDetailButtons'\);/);
+  assert.match(helper, /const content = \[info, buttons, sectionContent, group\]\.filter\(Boolean\);/);
   assert.match(helper, /pages\.forEach\(syncDetailRibbonPage\)/);
   assert.match(helper, /setAttribute\('data-witzi-detail-content', 'active'\)/);
 });
