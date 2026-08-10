@@ -22,7 +22,7 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>
     public override string Name => "Witzi Episode Posters";
 
     /// <inheritdoc />
-    public override string Description => "Builds Witzi-styled portrait episode posters with randomized borders from representative video frames.";
+    public override string Description => "Builds Witzi-styled portrait episode posters and installs the Witzi browser helper for Jellyfin Web.";
 
     /// <inheritdoc />
     public override Guid Id => Guid.Parse("896d9ba3-a129-4fcc-be38-c0521ebe2d8f");

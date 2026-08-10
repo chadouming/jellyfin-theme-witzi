@@ -49,9 +49,9 @@ Use one of these GitHub Pages imports to follow the latest published version:
 
 Use Jellyfin's built-in **Dark** theme under your user display settings for every variant except Latte; use **Light** for Latte so any unstyled fallback controls match.
 
-For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.5 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.5) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
+For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.6 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.6) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
 
-For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.5/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
+For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.6/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 
@@ -60,7 +60,7 @@ Clients can disable server-provided custom CSS in their display preferences. As 
 Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. Witzi now has two cooperating pieces:
 
 - the **Witzi Episode Posters** server plugin creates a persistent 2:3 Primary image from each episode's own video; and
-- the optional [`dist/witzi-posters.js`](dist/witzi-posters.js) browser helper makes Jellyfin Web request portrait Primary images for Continue Watching and Next Up, and maintains seamless backdrop transitions.
+- the [`dist/witzi-posters.js`](dist/witzi-posters.js) browser helper makes Jellyfin Web request portrait Primary images for Continue Watching and Next Up, maintains seamless backdrop transitions, and moves live detail content into the ribbon.
 
 The browser helper selects:
 
@@ -70,7 +70,9 @@ The browser helper selects:
 
 The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
 
-On desktop detail pages, the same helper moves Jellyfin's live title/info, action buttons, `detailSectionContent`, and `itemDetailsGroup` nodes into one ribbon container. Every part therefore shares one width, one background, and one clipping edge while retaining Jellyfin's live overview expansion and metadata updates. The synchronizer relocates the original nodes instead of copying them, replaces stale nodes when Jellyfin recreates the detail view, processes every cached detail-page instance, and measures the rendered poster and ribbon edges to keep them pixel-aligned across viewport sizes. The combined panel requires the JavaScript helper; without it, Jellyfin keeps its native detail-page structure.
+On desktop detail pages, the same helper moves Jellyfin's live title/info, action buttons, `detailSectionContent`, and `itemDetailsGroup` nodes directly into the real ribbon. Every part therefore shares one width, one background, and one clipping edge while retaining Jellyfin's live overview expansion and metadata updates. The synchronizer relocates the original nodes instead of copying them, replaces stale nodes when Jellyfin recreates the detail view, processes every cached detail-page instance, and measures the rendered poster and ribbon edges to keep them pixel-aligned across viewport sizes. The combined panel requires the JavaScript helper; without it, Jellyfin keeps its native detail-page structure.
+
+The plugin injects this bundled JavaScript because Custom CSS can only style Jellyfin's existing elements: it cannot move live DOM nodes, request replacement Primary images, or coordinate cached backdrop transitions. The commonly used JavaScript Injector plugin currently targets Jellyfin 10.11, so it is not a compatible delivery mechanism for this Jellyfin 12 ABI build. Installing the helper from Witzi Episode Posters keeps the required CSS and JavaScript paired at matching versions and makes the behavior available after a normal Jellyfin restart.
 
 #### Jellyfin 12 episode-poster plugin
 
@@ -90,9 +92,9 @@ Install **Witzi Episode Posters**, restart Jellyfin, then run **Dashboard -> Sch
 - registers the new image immediately and reports its 2:3 dimensions; and
 - never overwrites an existing image sidecar or an existing portrait Primary image.
 
-The Jellyfin service account therefore needs write access to the media folders. Poster generation has no automatic trigger; run the Library task manually whenever new episodes are added. GPU decoding depends on the FFmpeg build, exposed device, driver, and source codec; unsupported combinations fall back automatically. Existing sidecars are not recolored or overwritten. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.5/Witzi.Episode.Posters_0.1.4.0.zip) is also available from the release.
+The Jellyfin service account therefore needs write access to the media folders. Poster generation has no automatic trigger; run the Library task manually whenever new episodes are added. GPU decoding depends on the FFmpeg build, exposed device, driver, and source codec; unsupported combinations fall back automatically. Existing sidecars are not recolored or overwritten. Starting with plugin 0.1.5.0, its startup task also installs the embedded browser helper into Jellyfin Web, removing the Jellyfin 12 dependency on JavaScript Injector; the service account must be able to update Jellyfin Web's `index.html`. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.6/Witzi.Episode.Posters_0.1.5.0.zip) is also available from the release.
 
-To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
+For Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 
 ```js
 (function () {

@@ -18,6 +18,10 @@
 (function witziPosterHelper() {
   'use strict';
 
+  const themeFlag = window.getComputedStyle?.(document.documentElement)
+    ?.getPropertyValue('--witzi-theme-active')
+    ?.trim();
+  if (typeof window.getComputedStyle === 'function' && themeFlag !== '1') return;
   if (window.__witziPosterHelperLoaded) return;
   window.__witziPosterHelperLoaded = true;
   document.documentElement?.setAttribute?.('data-witzi-posters', 'active');

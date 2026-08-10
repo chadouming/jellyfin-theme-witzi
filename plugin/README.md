@@ -22,5 +22,15 @@ Library -> Generate Witzi episode posters**. The plugin does not create an
 automatic trigger; run the task manually whenever new episodes need posters.
 Existing poster sidecars are never overwritten, so their colors remain stable.
 
+At server startup, the plugin also installs its embedded `witzi-posters.js`
+helper into Jellyfin Web. This makes the overview and item details live inside
+the detail ribbon and enables portrait artwork on supported home rows without
+depending on the JavaScript Injector plugin. JavaScript is required because CSS
+cannot move live DOM nodes, replace episode image requests, or coordinate
+cached backdrop transitions, and the separate injector targets Jellyfin 10.11
+rather than this plugin's Jellyfin 12 ABI. The Jellyfin service needs write
+access to the web client's `index.html`; if the web directory is read-only, the
+startup task logs an error and the helper can still be installed manually.
+
 The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC4
 packages. It is not loadable by Jellyfin 10.x.

@@ -599,11 +599,30 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);
   assert.match(css, /\.layout-mobile \.cardOverlayButton-br\[data-action="play"\]\s*\{[^}]*display:\s*none\s*!important;/s);
+  assert.match(
+    css,
+    /\.emby-scroller\s*\{[^}]*-ms-overflow-style:\s*none;[^}]*scrollbar-width:\s*none;/s
+  );
+  assert.match(
+    css,
+    /\.emby-scroller::\-webkit-scrollbar\s*\{[^}]*display:\s*none;[^}]*height:\s*0;[^}]*width:\s*0;/s
+  );
+  assert.match(
+    css,
+    /\.emby-scrollbuttons\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*border:\s*1px solid[^;]+;[^}]*color:\s*var\(--witzi-text\)\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.emby-scrollbuttons \.emby-scrollbuttons-button:not\(:disabled\):is\(:hover, :focus-visible, :active\)\s*\{[^}]*background-color:\s*var\(--witzi-accent\)\s*!important;[^}]*color:\s*var\(--witzi-on-accent\)\s*!important;/s
+  );
 });
 
 test('anchors series artwork and Next Up beside ribbon-first scrolling content', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
   const helper = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+
+  assert.match(css, /--witzi-theme-active:\s*1;/);
+  assert.match(helper, /themeFlag !== '1'/);
 
   assert.match(
     css,
@@ -703,6 +722,14 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(
     css,
     /#itemDetailPage \.detailPagePrimaryContent,[\s\S]*#itemDetailPage \.detailPageSecondaryContainer\s*\{[^}]*padding-left:\s*var\(--witzi-detail-content-start\);/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage :is\(\s*\.detailPagePrimaryContainer,[\s\S]*#listChildrenCollapsible,[\s\S]*#childrenContent\s*\)\s*\{[^}]*align-self:\s*stretch;[^}]*max-width:\s*none\s*!important;[^}]*width:\s*100%\s*!important;/s
+  );
+  assert.match(
+    css,
+    /:is\(\s*\.detailPagePrimaryContent,[\s\S]*\.detailPageSecondaryContainer\s*\) > :is\(\.detailSection, \.detailVerticalSection\)\s*\{[^}]*max-width:\s*none\s*!important;[^}]*width:\s*100%\s*!important;/s
   );
   assert.match(
     css,

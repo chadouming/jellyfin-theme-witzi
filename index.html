@@ -530,12 +530,13 @@
         <h2>Real portrait episode art.</h2>
         <p>The Jellyfin 12 plugin samples each episode and stores a Witzi-styled 2:3 Primary poster with randomized frame borders beside the video.</p>
       </div>
+      <p class="notice">Why inject JavaScript? Custom CSS cannot move Jellyfin's live detail elements, replace episode image requests, or coordinate cached backdrop transitions. The separate JavaScript Injector plugin targets Jellyfin 10.11, so Witzi Episode Posters installs its matching helper directly for Jellyfin 12 when the server starts.</p>
       <ol class="steps">
         <li><strong>Add the catalog</strong>Use <code>https://chadouming.github.io/jellyfin-theme-witzi/manifest.json</code> under Dashboard â†’ Plugins â†’ Repositories.</li>
         <li><strong>Install and restart</strong>Install Witzi Episode Posters from the catalog, then restart Jellyfin.</li>
         <li><strong>Generate once</strong>Run Generate Witzi episode posters under Scheduled Tasks â†’ Library.</li>
       </ol>
-      <p class="notice">Built for Jellyfin ABI 12.0.0.0 / .NET 10. Jellyfin needs write permission to each media folder. Poster frame decoding uses an available GPU when FFmpeg supports it and falls back to software otherwise. <a href="https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.3/Witzi.Episode.Posters_0.1.3.0.zip">Download the manual plugin ZIP</a>.</p>
+      <p class="notice">Built for Jellyfin ABI 12.0.0.0 / .NET 10. Jellyfin needs write permission to each media folder and Jellyfin Web's <code>index.html</code>. Poster frame decoding uses an available GPU when FFmpeg supports it and falls back to software otherwise. <a href="https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.6/Witzi.Episode.Posters_0.1.5.0.zip">Download the manual plugin ZIP</a>.</p>
     </section>
   </main>
 
