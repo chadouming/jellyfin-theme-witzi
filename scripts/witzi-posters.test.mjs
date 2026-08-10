@@ -530,11 +530,11 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(css, /\.listItem\[data-type="Episode"\]:focus-within/);
   assert.match(
     css,
-    /\.detailRibbon\s*\{[^}]*border-radius:\s*1\.05rem;[^}]*backdrop-filter:\s*blur\(18px\) saturate\(1\.15\);/s
+    /\.detailRibbon\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*border-radius:\s*1\.05rem;[^}]*backdrop-filter:\s*none;/s
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid\s*!important;[^}]*"content actions";[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-rail-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid\s*!important;[^}]*"content actions";[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*padding-block:\s*0\.65rem 0;/s
   );
   assert.match(
     css,
@@ -559,7 +559,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-logo-height:\s*clamp\(3\.375rem, 8\.25vh, 5\.25rem\);[^}]*--witzi-detail-next-up-top:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-rail-top:\s*calc\(var\(--witzi-header-height\) \+ clamp\(0\.2rem, 0\.45vh, 0\.35rem\)\);[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);[^}]*--witzi-detail-next-up-top:/s
   );
   assert.doesNotMatch(
     css,
@@ -567,15 +567,12 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage \.detailLogo\s*\{[^}]*background-size:\s*contain;[^}]*height:\s*var\(--witzi-detail-logo-height\);[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-rail-top\);[^}]*width:\s*var\(--witzi-detail-rail-width\);/s
+    /#itemDetailPage \.detailLogo\s*\{[^}]*display:\s*none\s*!important;/s
   );
+  assert.doesNotMatch(css, /#itemDetailPage \.detailLogo\s*\{[^}]*position:\s*fixed;/s);
   assert.match(
     css,
     /\.layout-desktop #itemDetailPage \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-poster-top\)\s*!important;[^}]*width:\s*var\(--witzi-detail-rail-width\)\s*!important;/s
-  );
-  assert.match(
-    css,
-    /\.layout-desktop #itemDetailPage:has\(> \.detailLogo\.hide\)\s*\{[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);/s
   );
   assert.match(
     css,
@@ -583,7 +580,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:has\(\.nextUpSection:not\(\.hide\)\)\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(28vw, calc\(48\.5vh - 7\.5rem\)\), 48rem\);/s
+    /#itemDetailPage:has\(\.nextUpSection:not\(\.hide\)\)\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(28vw, calc\(48\.5vh - 4rem\)\), 48rem\);/s
   );
   assert.match(
     css,
@@ -595,11 +592,15 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\):has\(\.trackSelections:not\(\.hide\)\)\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(14rem, min\(28vw, 38vh\), 30rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(3\.75rem, 9vh, 6rem\);/s
+    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\):has\(\.trackSelections:not\(\.hide\)\)\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(14rem, min\(28vw, 38vh\), 30rem\);/s
   );
   assert.match(
     css,
-    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\) \.trackSelections:not\(\.hide\) \.trackSelectionFieldContainer:not\(\.hide\)\s*\{[^}]*width:\s*100%;/s
+    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\) \.trackSelections:not\(\.hide\) \.trackSelectionFieldContainer:not\(\.hide\)\s*\{[^}]*display:\s*grid\s*!important;[^}]*grid-template-columns:\s*minmax\(0, 1fr\)\s*!important;[^}]*width:\s*100%;/s
+  );
+  assert.match(
+    css,
+    /\.trackSelections:not\(\.hide\) \.detailTrackSelect\s*\{[^}]*max-width:\s*none\s*!important;[^}]*width:\s*100%\s*!important;/s
   );
   assert.match(
     css,
@@ -632,7 +633,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailSectionContent,[\s\S]*#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*background-color:[^}]*border-left:[^}]*margin:\s*0\s*!important;/s
+    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailSectionContent,[\s\S]*#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*border-left:[^}]*margin:\s*0\s*!important;/s
   );
   assert.match(
     css,
@@ -641,7 +642,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
-    /\.witzi-ribbon-content \.detailSectionContent\s*\{[^}]*display:\s*grid;[^}]*margin:\s*0;/s
+    /\.witzi-ribbon-content \.detailSectionContent\s*\{[^}]*background-color:\s*transparent\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*display:\s*grid;[^}]*margin:\s*0;/s
   );
   assert.match(
     css,

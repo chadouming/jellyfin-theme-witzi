@@ -1283,13 +1283,13 @@ a[data-role="button"]:focus-visible {
 
 /* Details and player surfaces. */
 .detailRibbon {
-  background-color: rgb(var(--witzi-surface-rgb) / 0.88) !important;
-  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 54%) !important;
+  background-color: var(--witzi-surface) !important;
+  background-image: none !important;
   border: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
   border-radius: 1.05rem;
   box-shadow: 0 8px 26px rgb(0 0 0 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.035);
   box-sizing: border-box;
-  backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: none;
 }
 
 .layout-desktop .detailPagePrimaryContainer {
@@ -1298,9 +1298,9 @@ a[data-role="button"]:focus-visible {
 }
 
 /*
- * Desktop detail artwork is one anchored rail: the logo sits above a prominent
- * poster while the ribbon, metadata, episode list, and secondary sections use
- * Jellyfin's normal page scroll. Mobile and TV keep their native document flow.
+ * Desktop detail artwork is one anchored poster rail while the ribbon,
+ * metadata, episode list, and secondary sections use Jellyfin's normal page
+ * scroll. Mobile and TV keep their native document flow.
  */
 .layout-desktop #itemDetailPage {
   --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
@@ -1308,16 +1308,14 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-rail-gap: clamp(1rem, 1.8vw, 1.6rem);
   --witzi-detail-rail-width: clamp(12rem, min(25.5vw, 36vh), 21rem);
   --witzi-detail-poster-height: calc(var(--witzi-detail-rail-width) * 1.5);
-  --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.55rem, 1.2vh, 0.9rem));
-  --witzi-detail-logo-gap: 0.5rem;
-  --witzi-detail-logo-height: clamp(3.375rem, 8.25vh, 5.25rem);
-  --witzi-detail-poster-top: calc(var(--witzi-detail-rail-top) + var(--witzi-detail-logo-height) + var(--witzi-detail-logo-gap));
+  --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.2rem, 0.45vh, 0.35rem));
+  --witzi-detail-poster-top: var(--witzi-detail-rail-top);
   --witzi-detail-next-up-top: calc(var(--witzi-detail-poster-top) + var(--witzi-detail-poster-height) + 1rem);
   --witzi-detail-content-start: calc(var(--witzi-detail-rail-edge) + var(--witzi-detail-rail-width) + var(--witzi-detail-rail-gap));
 }
 
-.layout-desktop #itemDetailPage:has(> .detailLogo.hide) {
-  --witzi-detail-poster-top: var(--witzi-detail-rail-top);
+#itemDetailPage .detailLogo {
+  display: none !important;
 }
 
 /*
@@ -1326,13 +1324,12 @@ a[data-role="button"]:focus-visible {
  * the bottom viewport edge, while the vw limit protects the content column.
  */
 .layout-desktop #itemDetailPage:has(.nextUpSection:not(.hide)) {
-  --witzi-detail-rail-width: clamp(12rem, min(28vw, calc(48.5vh - 7.5rem)), 48rem);
+  --witzi-detail-rail-width: clamp(12rem, min(28vw, calc(48.5vh - 4rem)), 48rem);
 }
 
 /* Playable movies use a larger, full-height artwork and track-selector rail. */
 .layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))):has(.trackSelections:not(.hide)) {
   --witzi-detail-rail-width: clamp(14rem, min(28vw, 38vh), 30rem);
-  --witzi-detail-logo-height: clamp(3.75rem, 9vh, 6rem);
 }
 
 /*
@@ -1345,20 +1342,6 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage .itemBackdrop {
   height: var(--witzi-detail-backdrop-height);
-}
-
-.layout-desktop #itemDetailPage .detailLogo {
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.76));
-  height: var(--witzi-detail-logo-height);
-  margin: 0;
-  pointer-events: none;
-  position: fixed;
-  top: var(--witzi-detail-rail-top);
-  width: var(--witzi-detail-rail-width);
-  z-index: 4;
 }
 
 .layout-desktop #itemDetailPage .detailImageContainer.hide-mobile .card {
@@ -1444,18 +1427,31 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .trackSelectionFieldContainer:not(.hide) {
+  align-items: stretch !important;
+  display: grid !important;
+  gap: 0.28rem;
+  grid-template-columns: minmax(0, 1fr) !important;
   margin: 0;
   max-width: none;
   min-width: 0;
   width: 100%;
 }
 
-.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .detailTrackSelect {
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .trackSelectionFieldContainer:not(.hide) > label,
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .trackSelectionFieldContainer:not(.hide) .selectLabel {
+  display: block;
+  margin: 0 !important;
+  max-width: none;
   width: 100%;
 }
 
-.layout-desktop[dir="ltr"] #itemDetailPage .detailLogo,
-.layout-desktop [dir="ltr"] #itemDetailPage .detailLogo,
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))) .trackSelections:not(.hide) .detailTrackSelect {
+  display: block;
+  max-width: none !important;
+  min-width: 0;
+  width: 100% !important;
+}
+
 .layout-desktop[dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop [dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop[dir="ltr"] #itemDetailPage .nextUpSection:not(.hide),
@@ -1466,8 +1462,6 @@ a[data-role="button"]:focus-visible {
   right: auto;
 }
 
-.layout-desktop[dir="rtl"] #itemDetailPage .detailLogo,
-.layout-desktop [dir="rtl"] #itemDetailPage .detailLogo,
 .layout-desktop[dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop [dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
 .layout-desktop[dir="rtl"] #itemDetailPage .nextUpSection:not(.hide),
@@ -1523,10 +1517,10 @@ a[data-role="button"]:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
   height: auto !important;
-  margin-top: calc(var(--witzi-detail-rail-top) - var(--witzi-detail-backdrop-height)) !important;
+  margin-top: calc(var(--witzi-detail-poster-top) - var(--witzi-detail-backdrop-height)) !important;
   min-height: clamp(7.6rem, 15vh, 9rem);
   overflow: visible;
-  padding-block: 0.65rem;
+  padding-block: 0.65rem 0;
   row-gap: 0.15rem;
 }
 
@@ -1563,8 +1557,8 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent,
 .layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .itemDetailsGroup {
-  background-color: rgb(var(--witzi-surface-rgb) / 0.88) !important;
-  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 54%) !important;
+  background-color: var(--witzi-surface) !important;
+  background-image: none !important;
   border-left: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
   border-right: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
   box-sizing: border-box;
@@ -1649,6 +1643,8 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent {
+  background-color: transparent !important;
+  background-image: none !important;
   display: grid;
   gap: 0.25rem;
   margin: 0;
@@ -1675,6 +1671,8 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup {
   align-items: stretch;
+  background-color: transparent !important;
+  background-image: none !important;
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
