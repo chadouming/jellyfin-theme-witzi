@@ -15,7 +15,7 @@ The default is Catppuccin Mocha. Six matching variants are included:
 | Dracula | Gothic violet and pink | `dist/witzi-dracula.css` |
 | Gruvbox | Warm retro gold and orange | `dist/witzi-gruvbox.css` |
 
-Desktop detail pages use a fixed, viewport-aware artwork rail: the enlarged media logo sits above a prominent poster matched to the episode-frame width. Series pages place one enlarged landscape Next Up card below it, while movies use that lower rail slot for stacked Video, Audio, and Subtitles selectors. The information ribbon begins at the top content edge and contains the title, action buttons, overview, Show More control, and complete item metadata group; Series and Season lists start directly below it, while remaining movie information follows in the same scrolling column. Keyword tags and external database links are hidden.
+Desktop detail pages use a fixed, viewport-aware artwork rail: the enlarged media logo sits above a prominent poster matched to the episode-frame width. Series pages place one enlarged landscape Next Up card below it. Playable movies use a larger height-aware logo/poster rail, with stacked Video, Audio, and Subtitles selectors filling the remaining space to the bottom of the viewport. The compact information ribbon begins at the top content edge and contains the title, action buttons, overview, Show More control, and a vertically stacked item metadata group; Series and Season lists start directly below it, while remaining movie information follows in the same scrolling column. Keyword tags and external database links are hidden.
 
 ## Install
 

@@ -1320,6 +1320,12 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-poster-top: var(--witzi-detail-rail-top);
 }
 
+/* Playable movies use a larger, full-height artwork and track-selector rail. */
+.layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))):has(.trackSelections:not(.hide)) {
+  --witzi-detail-rail-width: clamp(14rem, min(28vw, 38vh), 30rem);
+  --witzi-detail-logo-height: clamp(3.75rem, 9vh, 6rem);
+}
+
 /*
  * Season pages retain a shorter backdrop and denser synopsis block so their
  * compact landscape episode rows enter the scrolling column sooner.
@@ -1415,8 +1421,9 @@ a[data-role="button"]:focus-visible {
   box-sizing: border-box;
   display: grid;
   gap: 0.45rem;
+  bottom: 0.75rem;
   margin: 0 !important;
-  max-height: calc(100vh - var(--witzi-detail-next-up-top) - 0.75rem);
+  max-height: none;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 0.65rem !important;
@@ -1495,7 +1502,7 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop .detailRibbon {
-  align-content: stretch;
+  align-content: start;
   align-items: stretch;
   column-gap: clamp(0.65rem, 1.25vw, 1rem);
   display: grid !important;
@@ -1510,7 +1517,7 @@ a[data-role="button"]:focus-visible {
   min-height: clamp(7.6rem, 15vh, 9rem);
   overflow: visible;
   padding-block: 0.65rem;
-  row-gap: 0.4rem;
+  row-gap: 0.15rem;
 }
 
 .layout-desktop[dir="ltr"] .detailRibbon,
@@ -1557,19 +1564,20 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent {
   display: grid;
-  gap: 0.45rem;
-  padding-block: 0.65rem 0.45rem;
+  gap: 0.25rem;
+  padding-block: 0.2rem 0.35rem;
 }
 
 .layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .itemDetailsGroup {
-  align-items: center;
+  align-items: stretch;
   border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
   border-bottom-left-radius: 1.05rem;
   border-bottom-right-radius: 1.05rem;
   box-shadow: 0 8px 26px rgb(0 0 0 / 0.18);
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.9rem;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.28rem;
   padding-block: 0.2rem 0.65rem;
 }
 
@@ -1602,6 +1610,14 @@ a[data-role="button"]:focus-visible {
   grid-area: info;
 }
 
+.detailRibbon .infoWrapper .itemMiscInfo {
+  margin-bottom: 0.15rem !important;
+}
+
+.detailRibbon .infoWrapper .itemMiscInfo:last-child {
+  margin-bottom: 0 !important;
+}
+
 .detailRibbon .mainDetailButtons {
   align-self: center;
   flex-wrap: wrap;
@@ -1613,7 +1629,7 @@ a[data-role="button"]:focus-visible {
 .layout-desktop #itemDetailPage .witzi-ribbon-content {
   align-self: stretch;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.25rem;
   grid-area: content;
   min-width: 0;
 }
@@ -1624,7 +1640,7 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.25rem;
   margin: 0;
   min-width: 0;
 }
@@ -1648,12 +1664,19 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup {
-  align-items: center;
+  align-items: stretch;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.9rem;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.28rem;
   margin: 0;
   min-width: 0;
+}
+
+.layout-desktop #itemDetailPage .itemDetailsGroup > .MuiBox-root.css-0,
+.layout-desktop #itemDetailPage .itemDetailsGroup .detailsGroupItem.MuiBox-root.css-0 {
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup > div:empty {

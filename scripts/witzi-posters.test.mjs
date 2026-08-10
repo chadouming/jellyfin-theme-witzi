@@ -587,7 +587,11 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\) \.trackSelections:not\(\.hide\)\s*\{[^}]*display:\s*grid;[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-next-up-top\);[^}]*width:\s*var\(--witzi-detail-rail-width\);/s
+    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\) \.trackSelections:not\(\.hide\)\s*\{[^}]*display:\s*grid;[^}]*bottom:\s*0\.75rem;[^}]*max-height:\s*none;[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-next-up-top\);[^}]*width:\s*var\(--witzi-detail-rail-width\);/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:not\(:has\(\.nextUpSection:not\(\.hide\)\)\):has\(\.trackSelections:not\(\.hide\)\)\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(14rem, min\(28vw, 38vh\), 30rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(3\.75rem, 9vh, 6rem\);/s
   );
   assert.match(
     css,
@@ -628,7 +632,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*border-bottom:[^}]*border-bottom-left-radius:\s*1\.05rem;[^}]*box-shadow:[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/s
+    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*border-bottom:[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;/s
   );
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
@@ -637,7 +641,19 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.witzi-ribbon-content \.itemDetailsGroup\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*margin:\s*0;/s
+    /\.witzi-ribbon-content \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;[^}]*margin:\s*0;/s
+  );
+  assert.match(
+    css,
+    /\.itemDetailsGroup > \.MuiBox-root\.css-0,[\s\S]*\.itemDetailsGroup \.detailsGroupItem\.MuiBox-root\.css-0\s*\{[^}]*width:\s*100%;/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*align-content:\s*start;[^}]*row-gap:\s*0\.15rem;/s
+  );
+  assert.match(
+    css,
+    /\.detailRibbon \.infoWrapper \.itemMiscInfo\s*\{[^}]*margin-bottom:\s*0\.15rem\s*!important;/s
   );
   assert.match(
     css,
