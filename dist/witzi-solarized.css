@@ -1569,6 +1569,74 @@ a[data-role="button"]:focus-visible {
   padding-right: var(--witzi-detail-ribbon-inner-padding);
 }
 
+/*
+ * CSS-only fallback for clients where JavaScript Injector does not load the
+ * helper: join Jellyfin's original detail containers to the ribbon surface.
+ */
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailRibbon {
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+}
+
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailPagePrimaryContent {
+  padding-top: 0 !important;
+}
+
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent,
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .itemDetailsGroup {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.88) !important;
+  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 54%) !important;
+  border-left: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-right: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  box-sizing: border-box;
+  margin: 0 !important;
+  min-width: 0;
+}
+
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent {
+  display: grid;
+  gap: 0.45rem;
+  padding-block: 0.65rem 0.45rem;
+}
+
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .itemDetailsGroup {
+  align-items: center;
+  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-bottom-left-radius: 1.05rem;
+  border-bottom-right-radius: 1.05rem;
+  box-shadow: 0 8px 26px rgb(0 0 0 / 0.18);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  padding-block: 0.2rem 0.65rem;
+}
+
+.layout-desktop[dir="ltr"] #itemDetailPage:not([data-witzi-detail-content="active"]) :is(.detailSectionContent, .itemDetailsGroup),
+.layout-desktop [dir="ltr"] #itemDetailPage:not([data-witzi-detail-content="active"]) :is(.detailSectionContent, .itemDetailsGroup) {
+  padding-left: var(--witzi-detail-ribbon-inner-padding);
+  padding-right: clamp(1rem, 2.4vw, 2.25rem);
+}
+
+.layout-desktop[dir="rtl"] #itemDetailPage:not([data-witzi-detail-content="active"]) :is(.detailSectionContent, .itemDetailsGroup),
+.layout-desktop [dir="rtl"] #itemDetailPage:not([data-witzi-detail-content="active"]) :is(.detailSectionContent, .itemDetailsGroup) {
+  padding-left: clamp(1rem, 2.4vw, 2.25rem);
+  padding-right: var(--witzi-detail-ribbon-inner-padding);
+}
+
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent .overview {
+  font-size: clamp(0.82rem, 1vw, 0.94rem);
+  line-height: 1.42;
+  margin: 0;
+  max-width: 72rem;
+}
+
+.layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent .overview-controls {
+  justify-content: flex-start;
+  margin-top: -0.2rem;
+}
+
 .detailRibbon .infoWrapper {
   align-self: center;
   grid-area: info;

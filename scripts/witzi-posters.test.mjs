@@ -618,6 +618,18 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     css,
     /\.mediaInfoText\.mediaInfoOfficialRating\s*\{[^}]*color:\s*inherit\s*!important;/s
   );
+  assert.match(
+    css,
+    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailRibbon\s*\{[^}]*border-bottom:\s*0;[^}]*border-bottom-left-radius:\s*0;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailSectionContent,[\s\S]*#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*background-color:[^}]*border-left:[^}]*margin:\s*0\s*!important;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*border-bottom:[^}]*border-bottom-left-radius:\s*1\.05rem;[^}]*box-shadow:[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;/s
+  );
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
