@@ -1320,6 +1320,15 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-poster-top: var(--witzi-detail-rail-top);
 }
 
+/*
+ * Series size the portrait poster and landscape Next Up card as one unit. The
+ * height-derived width lets both cards grow together until the rail reaches
+ * the bottom viewport edge, while the vw limit protects the content column.
+ */
+.layout-desktop #itemDetailPage:has(.nextUpSection:not(.hide)) {
+  --witzi-detail-rail-width: clamp(12rem, min(28vw, calc(48.5vh - 7.5rem)), 48rem);
+}
+
 /* Playable movies use a larger, full-height artwork and track-selector rail. */
 .layout-desktop #itemDetailPage:not(:has(.nextUpSection:not(.hide))):has(.trackSelections:not(.hide)) {
   --witzi-detail-rail-width: clamp(14rem, min(28vw, 38vh), 30rem);
@@ -1364,9 +1373,10 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage .nextUpSection:not(.hide) {
+  bottom: 0.75rem;
   box-sizing: border-box;
   margin: 0 !important;
-  max-height: calc(100vh - var(--witzi-detail-next-up-top) - 0.75rem);
+  max-height: none;
   overflow: hidden;
   padding: 0 !important;
   position: fixed;
