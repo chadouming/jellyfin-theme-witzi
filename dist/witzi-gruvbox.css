@@ -1579,7 +1579,9 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop .detailRibbon {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column;
+  gap: 0.12rem;
   height: auto !important;
   margin-top: calc(
     var(--witzi-detail-top-padding)
@@ -1589,13 +1591,7 @@ a[data-role="button"]:focus-visible {
   max-width: none;
   min-height: clamp(7.6rem, 15vh, 9rem);
   overflow: hidden;
-  padding-block: 0;
-}
-
-.layout-desktop #itemDetailPage .detailRibbon > .witzi-ribbon-content {
-  box-sizing: border-box;
-  max-width: 100%;
-  min-width: 0;
+  padding-block: 0.65rem 0;
 }
 
 .layout-desktop[dir="ltr"] .detailRibbon,
@@ -1637,19 +1633,7 @@ a[data-role="button"]:focus-visible {
   width: 100%;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-  max-width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  padding-block: 0.65rem 0;
-  width: 100%;
-}
-
-.layout-desktop #itemDetailPage .witzi-ribbon-content > :is(.infoWrapper, .mainDetailButtons, .detailSectionContent, .itemDetailsGroup) {
+.layout-desktop #itemDetailPage .detailRibbon > :is(.infoWrapper, .mainDetailButtons, .detailSectionContent, .itemDetailsGroup) {
   background-color: transparent !important;
   background-image: none !important;
   border: 0 !important;
@@ -1662,11 +1646,7 @@ a[data-role="button"]:focus-visible {
   width: 100% !important;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content:empty {
-  display: none;
-}
-
-.layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent {
+.layout-desktop #itemDetailPage .detailRibbon > .detailSectionContent {
   background-color: transparent !important;
   background-image: none !important;
   border: 0 !important;
@@ -1683,31 +1663,31 @@ a[data-role="button"]:focus-visible {
   width: 100% !important;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent > * {
+.layout-desktop #itemDetailPage .detailRibbon > .detailSectionContent > * {
   box-sizing: border-box;
   max-width: 100%;
   min-width: 0;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .overview {
+.layout-desktop #itemDetailPage .detailRibbon .overview {
   font-size: clamp(0.82rem, 1vw, 0.94rem);
   line-height: 1.42;
   margin: 0;
   max-width: 72rem;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .overview-controls {
+.layout-desktop #itemDetailPage .detailRibbon .overview-controls {
   justify-content: flex-start;
   margin-top: -0.2rem;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .overview-expand {
+.layout-desktop #itemDetailPage .detailRibbon .overview-expand {
   color: var(--witzi-accent) !important;
   font-size: 0.78rem;
   padding: 0.1rem 0 !important;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup {
+.layout-desktop #itemDetailPage .detailRibbon > .itemDetailsGroup {
   align-items: stretch;
   background-color: transparent !important;
   background-image: none !important;
@@ -1736,11 +1716,11 @@ a[data-role="button"]:focus-visible {
   width: 100%;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .itemDetailsGroup > div:empty {
+.layout-desktop #itemDetailPage .detailRibbon > .itemDetailsGroup > div:empty {
   display: none;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .detailsGroupItem {
+.layout-desktop #itemDetailPage .detailRibbon .detailsGroupItem {
   align-items: center;
   display: flex;
   gap: 0.35rem;
@@ -1748,7 +1728,7 @@ a[data-role="button"]:focus-visible {
   max-width: min(100%, 32rem);
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .detailsGroupItem .label {
+.layout-desktop #itemDetailPage .detailRibbon .detailsGroupItem .label {
   color: var(--witzi-muted);
   flex: 0 0 auto;
   font-size: 0.72rem;
@@ -1758,7 +1738,7 @@ a[data-role="button"]:focus-visible {
   text-transform: uppercase;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .focuscontainer-x {
+.layout-desktop #itemDetailPage .detailRibbon .focuscontainer-x {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
@@ -1767,7 +1747,7 @@ a[data-role="button"]:focus-visible {
   overflow: hidden;
 }
 
-.layout-desktop #itemDetailPage .witzi-ribbon-content .button-link {
+.layout-desktop #itemDetailPage .detailRibbon .button-link {
   background: var(--witzi-accent-dim);
   border: 1px solid rgb(var(--witzi-accent-rgb) / 0.32);
   border-radius: 999px;

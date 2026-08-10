@@ -407,18 +407,31 @@
     return source || outsideHost || insideHost || page.querySelector?.(selector);
   }
 
-  function syncDetailRibbonChildren(host, content) {
-    content.forEach((element, index) => {
-      const reference = host.children?.[index] || null;
-      if (reference !== element) host.insertBefore(element, reference);
+  function syncDetailRibbonChildren(ribbon, content, managedContent) {
+    managedContent.forEach((element) => {
+      if (content.includes(element) || !ribbon.contains?.(element)) return;
+
+      if (element.remove) element.remove();
+      else element.parentNode?.removeChild?.(element);
     });
 
-    [...(host.children || [])].forEach((element) => {
-      if (!content.includes(element)) {
-        if (element.remove) element.remove();
-        else host.removeChild?.(element);
-      }
-    });
+    const current = [...(ribbon.children || [])].filter((element) => content.includes(element));
+    const alreadyCurrent = current.length === content.length
+      && content.every((element, index) => (
+        current[index] === element && element.parentNode === ribbon
+      ));
+
+    if (!alreadyCurrent) {
+      content.forEach((element) => ribbon.insertBefore(element, null));
+    }
+
+    // Unwrap the container used by older helper builds so every live detail
+    // node is owned directly by Jellyfin's actual ribbon.
+    const legacyHost = ribbon.querySelector?.('.witzi-ribbon-content');
+    if (legacyHost && !legacyHost.children?.length) {
+      if (legacyHost.remove) legacyHost.remove();
+      else ribbon.removeChild?.(legacyHost);
+    }
   }
 
   function detailPageHasScrolled(page) {
@@ -453,41 +466,43 @@
 
   function syncDetailRibbonPage(page) {
     const ribbon = page?.querySelector?.('.detailRibbon');
-    if (!page || !ribbon || typeof document.createElement !== 'function') return;
+    if (!page || !ribbon) return;
 
-    let host = ribbon.querySelector?.('.witzi-ribbon-content');
-    if (!host) {
-      host = document.createElement('div');
-      host.classList.add('witzi-ribbon-content');
-      ribbon.insertBefore(host, ribbon.querySelector?.('.mainDetailButtons') || null);
-    }
-
-    const info = detailContentCandidate(page, host, '.infoWrapper');
-    const buttons = detailContentCandidate(page, host, '.mainDetailButtons');
-    const sectionContent = detailContentCandidate(
+    const info = detailContentCandidate(page, ribbon, '.infoWrapper');
+    const buttons = detailContentCandidate(page, ribbon, '.mainDetailButtons');
+    const overview = detailContentCandidate(
       page,
-      host,
-      '.detailSectionContent',
-      '.detailPagePrimaryContent > .detailSection > .detailSectionContent'
-    );
+      ribbon,
+      '.overview.detail-clamp-text',
+      '.detailPagePrimaryContent .overview.detail-clamp-text'
+    ) || detailContentCandidate(page, ribbon, '.overview');
+    const sectionContent = overview?.closest?.('.detailSectionContent')
+      || detailContentCandidate(
+        page,
+        ribbon,
+        '.detailSectionContent',
+        '.detailPagePrimaryContent .detailSectionContent'
+      );
     const group = detailContentCandidate(
       page,
-      host,
+      ribbon,
       '.itemDetailsGroup',
-      '.detailPagePrimaryContent > .detailSection > .itemDetailsGroup'
+      '.detailPagePrimaryContent .itemDetailsGroup'
     );
     const content = [info, buttons, sectionContent, group].filter(Boolean);
-    const current = [...(host.children || [])];
-    const alreadyCurrent = current.length === content.length
-      && content.every((element, index) => current[index] === element);
-
-    if (!alreadyCurrent) syncDetailRibbonChildren(host, content);
+    const managedContent = [
+      ...(page.querySelectorAll?.('.infoWrapper') || []),
+      ...(page.querySelectorAll?.('.mainDetailButtons') || []),
+      ...(page.querySelectorAll?.('.detailSectionContent') || []),
+      ...(page.querySelectorAll?.('.itemDetailsGroup') || [])
+    ];
+    syncDetailRibbonChildren(ribbon, content, managedContent);
 
     const contentIsComplete = Boolean(
       sectionContent
       && group
-      && sectionContent.parentNode === host
-      && group.parentNode === host
+      && sectionContent.parentNode === ribbon
+      && group.parentNode === ribbon
     );
 
     if (contentIsComplete) {
