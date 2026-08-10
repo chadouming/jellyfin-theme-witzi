@@ -102,6 +102,9 @@
   --witzi-radius-md: 8px;
   --witzi-radius-lg: 12px;
   --witzi-radius-xl: 16px;
+  --witzi-header-height: 2.5rem;
+  --witzi-header-control: 2.25rem;
+  --witzi-header-gap: 0.35rem;
   --witzi-shadow-sm: 0 3px 12px rgb(0 0 0 / 0.18);
   --witzi-shadow-md: 0 8px 26px rgb(0 0 0 / 0.24);
   --witzi-shadow-focus: 0 0 0 3px rgb(var(--witzi-accent-rgb) / 0.28);
@@ -175,21 +178,160 @@ a:hover,
 }
 
 .backgroundContainer.withBackdrop {
-  background-color: rgb(var(--witzi-bg-rgb) / 0.82) !important;
-  background-image: linear-gradient(90deg, rgb(var(--witzi-bg-rgb) / 0.9), rgb(var(--witzi-bg-rgb) / 0.56) 62%, transparent) !important;
+  background-color: rgb(var(--witzi-bg-rgb) / 0.32) !important;
+  background-image: linear-gradient(90deg, rgb(var(--witzi-bg-rgb) / 0.84), rgb(var(--witzi-bg-rgb) / 0.44) 58%, rgb(var(--witzi-bg-rgb) / 0.12)) !important;
   opacity: 1 !important;
+}
+
+/* Respect clients that render their own backdrop behind Jellyfin Web. */
+.backgroundContainer.withBackdrop.backgroundContainer-transparent {
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 /* Header and navigation. */
 .skinHeader,
 .skinHeader-withBackground,
 .skinHeader.semiTransparent {
-  background-color: rgb(var(--witzi-surface-rgb) / 0.82) !important;
-  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 48%) !important;
-  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.7);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.14);
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0;
+  box-shadow: none;
   color: var(--witzi-text);
-  backdrop-filter: blur(18px) saturate(1.15) !important;
+  backdrop-filter: none !important;
+  padding: 0.35rem clamp(0.45rem, 1vw, 0.8rem) 0;
+}
+
+.skinHeader .headerTop {
+  gap: var(--witzi-header-gap);
+  min-height: var(--witzi-header-height);
+  padding: 0 !important;
+}
+
+.skinHeader .headerLeft,
+.skinHeader .headerRight,
+.skinHeader .headerTabs.sectionTabs:not(.hide),
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiStack-root,
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:not(:empty),
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiIconButton-root,
+.MuiAppBar-root > .MuiToolbar-root:not(:first-child) {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.88) !important;
+  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 54%) !important;
+  border: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.14);
+  backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.skinHeader .headerLeft,
+.skinHeader .headerRight {
+  align-items: center;
+  border-radius: 0.875rem;
+  display: flex;
+  min-height: var(--witzi-header-height);
+  padding: 0.1rem;
+}
+
+.skinHeader .headerRight {
+  margin-left: auto;
+}
+
+.skinHeader .headerButton {
+  height: var(--witzi-header-control) !important;
+  padding: 0.375rem !important;
+  width: var(--witzi-header-control) !important;
+}
+
+.skinHeader .pageTitle {
+  font-size: 1rem;
+  margin-inline: 0.35rem 0.55rem;
+}
+
+.skinHeader .headerTabs.sectionTabs:not(.hide) {
+  border-radius: 0.875rem;
+  margin: var(--witzi-header-gap) auto 0;
+  max-width: 100%;
+  width: max-content;
+}
+
+/* Current MUI header: one compact left island and one joined right island. */
+.MuiPaper-root.MuiAppBar-root {
+  background: transparent !important;
+  border: 0;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--witzi-text) !important;
+  padding: 0.35rem clamp(0.45rem, 1vw, 0.8rem) 0;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child {
+  gap: var(--witzi-header-gap);
+  min-height: var(--witzi-header-height) !important;
+  padding: 0 !important;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:not(:first-child) {
+  border-radius: 0.875rem;
+  margin-top: var(--witzi-header-gap);
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiStack-root {
+  align-items: center;
+  border-radius: 0.875rem;
+  min-height: var(--witzi-header-height);
+  padding: 0.1rem;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiStack-root > .MuiButton-root {
+  border-radius: 0.7rem !important;
+  font-size: 0.82rem;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.65rem;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiIconButton-root {
+  border-radius: 0.875rem !important;
+  height: var(--witzi-header-height);
+  padding: 0.5rem !important;
+  width: var(--witzi-header-height);
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root {
+  align-items: center;
+  display: flex;
+  flex-grow: 0 !important;
+  min-height: var(--witzi-header-height);
+  padding: 0.1rem;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:empty {
+  display: none !important;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:first-of-type:not(:empty) {
+  border-radius: 0.875rem 0 0 0.875rem;
+  margin-left: auto;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:first-of-type:not(:empty) + .MuiBox-root:not(:empty) {
+  border-left: 0;
+  border-radius: 0 0.875rem 0.875rem 0;
+  margin-left: calc(-1 * var(--witzi-header-gap));
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:empty + .MuiBox-root:not(:empty) {
+  border-left: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-radius: 0.875rem;
+  margin-left: auto;
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root .MuiIconButton-root {
+  height: var(--witzi-header-control);
+  padding: 0.375rem !important;
+  width: var(--witzi-header-control);
+}
+
+.MuiAppBar-root > .MuiToolbar-root:first-child .MuiIconButton-root > .MuiAvatar-root {
+  margin: 0;
 }
 
 .layout-tv .skinHeader.semiTransparent,
@@ -211,6 +353,14 @@ a:hover,
 .paper-icon-button-light:active:not(:disabled) {
   background: var(--witzi-accent-dim) !important;
   color: var(--witzi-accent) !important;
+}
+
+/* Match the MUI account avatar to the adjacent 24px toolbar icons. */
+.MuiToolbar-root .MuiIconButton-root > .MuiAvatar-root {
+  font-size: 0.75rem !important;
+  height: 1.5rem !important;
+  margin: 0.75rem;
+  width: 1.5rem !important;
 }
 
 .mainDrawer,
@@ -348,112 +498,117 @@ a:hover,
 .defaultCardBackground5 { background-color: var(--witzi-accent-dark) !important; }
 
 /*
- * Continue Watching and Next Up use backdrop cards by default. Match the
- * portrait geometry used by Recently Added movie and TV rows. The data-monitor
- * value is assigned by Jellyfin to both requested sections and avoids fragile
- * title- or row-position selectors.
+ * The optional Witzi poster helper replaces Continue Watching and Next Up
+ * artwork with a real poster before adding .witzi-poster-card. Cards without a
+ * poster retain Jellyfin's native landscape backdrop geometry, avoiding a
+ * cropped fallback. The data-monitor value is assigned by Jellyfin to both
+ * requested sections and avoids fragile title- or row-position selectors.
  */
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
   width: 33.3333333333% !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
   width: 40vw !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .cardPadder-backdrop,
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .cardPadder-overflowBackdrop,
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .overflowBackdropCard-textCardPadder {
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-card .cardPadder-backdrop,
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-card .cardPadder-overflowBackdrop,
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-card .overflowBackdropCard-textCardPadder {
   padding-bottom: 150% !important;
 }
 
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-card .blurhash-canvas {
+  opacity: 0 !important;
+}
+
 @media (min-width: 25em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 31.2vw !important;
   }
 }
 
 @media (min-width: 43.75em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 25% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 23.1vw !important;
   }
 }
 
 @media (orientation: landscape) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 23.1vw !important;
   }
 }
 
 @media (min-width: 50em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 20% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 18.5vw !important;
   }
 }
 
 @media (min-width: 75em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 16.6666666667% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 15.5vw !important;
   }
 }
 
 @media (min-width: 87.5em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 14.2857142857% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 13.3vw !important;
   }
 }
 
 @media (min-width: 100em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 12.5% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 11.6vw !important;
   }
 }
 
 @media (min-width: 120em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 11.1111111111% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 10.41vw !important;
   }
 }
 
 @media (min-width: 131.25em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
     width: 10% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
     width: 9.3vw !important;
   }
 }
 
-.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .backdropCard {
+.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .backdropCard.witzi-poster-card {
   width: 16.6666666667% !important;
 }
 
-.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard.witzi-poster-card {
   width: 15.6vw !important;
 }
 
@@ -933,7 +1088,17 @@ a[data-role="button"]:focus-visible {
   .skinHeader,
   .skinHeader-withBackground,
   .skinHeader.semiTransparent {
-    backdrop-filter: blur(12px) !important;
+    padding-inline: 0.35rem;
+  }
+
+  .skinHeader .headerLeft,
+  .skinHeader .headerRight,
+  .skinHeader .headerTabs.sectionTabs:not(.hide),
+  .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiStack-root,
+  .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:not(:empty),
+  .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiIconButton-root,
+  .MuiAppBar-root > .MuiToolbar-root:not(:first-child) {
+    backdrop-filter: blur(12px);
   }
 }
 

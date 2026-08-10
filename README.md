@@ -53,6 +53,32 @@ For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jel
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 
+### Poster cards for Continue Watching and Next Up
+
+Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. The optional [`dist/witzi-posters.js`](dist/witzi-posters.js) helper uses Jellyfin's already-authenticated browser API client to select:
+
+- the season or series Primary poster for an episode;
+- the item's own Primary poster for a movie; or
+- the untouched native landscape backdrop when no poster exists or the lookup fails.
+
+The portrait layout is enabled only after a poster is found. This makes the rows match Recently Added without cropping a landscape fallback.
+
+To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
+
+```js
+(function () {
+  const script = document.createElement('script');
+  script.src = 'https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-posters.js';
+  document.head.appendChild(script);
+}());
+```
+
+Pasting the full file keeps the code local and pinned. Using the hosted loader follows future updates after a browser refresh. The helper changes card artwork only in Jellyfin Web surfaces where JavaScript injection is active; native clients keep their own layout.
+
+### Backdrops
+
+Enable **Settings → Display → Backdrops** for each Jellyfin Web client where you want dynamic artwork. Witzi leaves Jellyfin's `.backdropImage` layer intact, adds a readable palette tint above it, and respects `backgroundContainer-transparent` when a wrapper client renders its own backdrop. Backdrop-less pages continue to use the Witzi pattern.
+
 ## Compatibility
 
 The theme targets Jellyfin Web 10.11 and the current palette-variable model in Jellyfin Web 12. It maps the official `--jf-palette-*` variables for current components and also styles stable legacy selectors used by media cards, details, playback, Live TV, forms, tabs, dialogs, and navigation.
@@ -66,9 +92,9 @@ Source files stay intentionally dependency-free:
 ```text
 assets/          Witzi's palette-specific SVG tiles
 src/palettes/    Palette tokens
-src/             Shared Jellyfin component styling
+src/             Shared styling and optional poster-helper source
 themes/          Small composable @import entry points
-dist/            Standalone, paste-ready builds
+dist/            Standalone CSS builds and the poster helper
 scripts/         Dependency-free build/check script
 ```
 

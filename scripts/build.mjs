@@ -25,6 +25,9 @@ const requiredTokens = [
 const checkOnly = process.argv.includes('--check');
 const basePath = resolve(projectRoot, 'src/witzi-base.css');
 const base = readFileSync(basePath, 'utf8').replaceAll('\r\n', '\n').trim();
+const posterHelperPath = resolve(projectRoot, 'src/witzi-posters.js');
+const posterHelperOutputPath = resolve(projectRoot, 'dist/witzi-posters.js');
+const posterHelper = `${readFileSync(posterHelperPath, 'utf8').replaceAll('\r\n', '\n').trim()}\n`;
 const problems = [];
 
 function colorToken(css, token) {
@@ -146,6 +149,12 @@ function createBundle(variant) {
 
 assertBalancedBraces(base, 'src/witzi-base.css');
 
+try {
+  Function(posterHelper);
+} catch (error) {
+  problems.push(`src/witzi-posters.js has invalid JavaScript: ${error.message}`);
+}
+
 for (const variant of variants) {
   const bundle = createBundle(variant);
   const outputPath = resolve(projectRoot, `dist/witzi-${variant}.css`);
@@ -176,6 +185,18 @@ for (const variant of variants) {
     writeFileSync(outputPath, bundle, 'utf8');
     process.stdout.write(`built dist/witzi-${variant}.css\n`);
   }
+}
+
+if (checkOnly) {
+  const current = existsSync(posterHelperOutputPath)
+    ? readFileSync(posterHelperOutputPath, 'utf8').replaceAll('\r\n', '\n')
+    : '';
+  if (current !== posterHelper) {
+    problems.push('dist/witzi-posters.js is not up to date');
+  }
+} else {
+  writeFileSync(posterHelperOutputPath, posterHelper, 'utf8');
+  process.stdout.write('built dist/witzi-posters.js\n');
 }
 
 if (problems.length > 0) {
