@@ -307,6 +307,116 @@ a:hover,
 .defaultCardBackground4 { background-color: var(--witzi-answer-d) !important; }
 .defaultCardBackground5 { background-color: var(--witzi-accent-dark) !important; }
 
+/*
+ * Continue Watching and Next Up use backdrop cards by default. Match the
+ * portrait geometry used by Recently Added movie and TV rows. The data-monitor
+ * value is assigned by Jellyfin to both requested sections and avoids fragile
+ * title- or row-position selectors.
+ */
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  width: 33.3333333333% !important;
+}
+
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  width: 40vw !important;
+}
+
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .cardPadder-backdrop,
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .cardPadder-overflowBackdrop,
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .overflowBackdropCard-textCardPadder {
+  padding-bottom: 150% !important;
+}
+
+@media (min-width: 25em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 31.2vw !important;
+  }
+}
+
+@media (min-width: 43.75em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 25% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 23.1vw !important;
+  }
+}
+
+@media (orientation: landscape) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 23.1vw !important;
+  }
+}
+
+@media (min-width: 50em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 20% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 18.5vw !important;
+  }
+}
+
+@media (min-width: 75em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 16.6666666667% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 15.5vw !important;
+  }
+}
+
+@media (min-width: 87.5em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 14.2857142857% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 13.3vw !important;
+  }
+}
+
+@media (min-width: 100em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 12.5% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 11.6vw !important;
+  }
+}
+
+@media (min-width: 120em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 11.1111111111% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 10.41vw !important;
+  }
+}
+
+@media (min-width: 131.25em) {
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+    width: 10% !important;
+  }
+
+  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+    width: 9.3vw !important;
+  }
+}
+
+.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  width: 16.6666666667% !important;
+}
+
+.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  width: 15.6vw !important;
+}
+
 /* Panels, dialogs, menus, and list surfaces. */
 .paperList,
 .visualCardBox,
