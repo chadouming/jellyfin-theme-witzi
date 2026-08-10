@@ -1333,48 +1333,91 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-ribbon-inner-padding: clamp(1rem, 3.3vw, 3.5rem);
 }
 
-/* Keep detail artwork compact without changing Jellyfin's mobile/TV flow. */
+/*
+ * Desktop detail artwork is one anchored rail: the logo sits above a smaller
+ * poster while the ribbon, metadata, episode list, and secondary sections use
+ * Jellyfin's normal page scroll. Mobile and TV keep their native document flow.
+ */
 .layout-desktop #itemDetailPage {
   --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
-  --witzi-detail-poster-lift: 12.96em;
+  --witzi-detail-rail-edge: clamp(1rem, 3.3vw, 3.5rem);
+  --witzi-detail-rail-gap: clamp(1rem, 1.8vw, 1.6rem);
+  --witzi-detail-rail-width: clamp(9.75rem, min(14vw, 26vh), 13rem);
+  --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.85rem, 2vh, 1.25rem));
+  --witzi-detail-logo-gap: 0.5rem;
+  --witzi-detail-logo-height: clamp(2.75rem, 7vh, 4.25rem);
+  --witzi-detail-content-start: calc(var(--witzi-detail-rail-edge) + var(--witzi-detail-rail-width) + var(--witzi-detail-rail-gap));
 }
 
 /*
- * Season pages place their transparent logo immediately above the poster.
- * Their shorter backdrop and denser synopsis block bring episodes up
- * without changing the compact landscape episode cards themselves.
+ * Season pages retain a shorter backdrop and denser synopsis block so their
+ * compact landscape episode rows enter the scrolling column sooner.
  */
 .layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) {
   --witzi-detail-backdrop-height: clamp(15rem, 30vh, 20rem);
-  --witzi-detail-logo-gap: 0.4rem;
-  --witzi-detail-logo-height: clamp(2.5rem, 4vh, 3rem);
 }
 
 .layout-desktop #itemDetailPage .itemBackdrop {
   height: var(--witzi-detail-backdrop-height);
 }
 
-.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
+.layout-desktop #itemDetailPage .detailLogo {
   background-position: center center;
-  background-size: 76% auto;
+  background-repeat: no-repeat;
+  background-size: contain;
   filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.76));
   height: var(--witzi-detail-logo-height);
+  margin: 0;
   pointer-events: none;
-  top: calc(var(--witzi-detail-backdrop-height) - var(--witzi-detail-poster-lift) - var(--witzi-detail-logo-height) - var(--witzi-detail-logo-gap));
-  width: 25vw;
+  position: fixed;
+  top: var(--witzi-detail-rail-top);
+  width: var(--witzi-detail-rail-width);
   z-index: 4;
 }
 
-.layout-desktop[dir="ltr"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo,
-.layout-desktop [dir="ltr"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
-  left: 3.3vw;
+.layout-desktop #itemDetailPage .detailImageContainer.hide-mobile .card {
+  float: none;
+  margin: 0 !important;
+  max-height: none;
+  max-width: none;
+  position: fixed;
+  top: calc(var(--witzi-detail-rail-top) + var(--witzi-detail-logo-height) + var(--witzi-detail-logo-gap)) !important;
+  width: var(--witzi-detail-rail-width) !important;
+  z-index: 3;
+}
+
+.layout-desktop #itemDetailPage > .detailLogo.hide + .detailPageWrapperContainer .detailImageContainer.hide-mobile .card {
+  top: var(--witzi-detail-rail-top) !important;
+}
+
+.layout-desktop[dir="ltr"] #itemDetailPage .detailLogo,
+.layout-desktop [dir="ltr"] #itemDetailPage .detailLogo,
+.layout-desktop[dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card,
+.layout-desktop [dir="ltr"] #itemDetailPage .detailImageContainer.hide-mobile .card {
+  left: var(--witzi-detail-rail-edge) !important;
   right: auto;
 }
 
-.layout-desktop[dir="rtl"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo,
-.layout-desktop [dir="rtl"] #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
+.layout-desktop[dir="rtl"] #itemDetailPage .detailLogo,
+.layout-desktop [dir="rtl"] #itemDetailPage .detailLogo,
+.layout-desktop[dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card,
+.layout-desktop [dir="rtl"] #itemDetailPage .detailImageContainer.hide-mobile .card {
   left: auto;
-  right: 3.3vw;
+  right: var(--witzi-detail-rail-edge) !important;
+}
+
+.layout-desktop[dir="ltr"] #itemDetailPage .detailPagePrimaryContent,
+.layout-desktop [dir="ltr"] #itemDetailPage .detailPagePrimaryContent,
+.layout-desktop[dir="ltr"] #itemDetailPage .detailPageSecondaryContainer,
+.layout-desktop [dir="ltr"] #itemDetailPage .detailPageSecondaryContainer {
+  padding-left: var(--witzi-detail-content-start);
+}
+
+.layout-desktop[dir="rtl"] #itemDetailPage .detailPagePrimaryContent,
+.layout-desktop [dir="rtl"] #itemDetailPage .detailPagePrimaryContent,
+.layout-desktop[dir="rtl"] #itemDetailPage .detailPageSecondaryContainer,
+.layout-desktop [dir="rtl"] #itemDetailPage .detailPageSecondaryContainer {
+  padding-right: var(--witzi-detail-content-start);
 }
 
 .layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailPagePrimaryContent {
@@ -1396,12 +1439,6 @@ a[data-role="button"]:focus-visible {
   margin-top: -0.35rem;
 }
 
-@media (max-height: 64rem) {
-  .layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .detailLogo {
-    display: none !important;
-  }
-}
-
 .layout-desktop .detailRibbon {
   height: auto;
   margin-top: -8.6em;
@@ -1411,7 +1448,7 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop[dir="ltr"] .detailRibbon,
 .layout-desktop [dir="ltr"] .detailRibbon {
-  margin-left: calc(32.45vw - var(--witzi-detail-ribbon-inner-padding));
+  margin-left: calc(var(--witzi-detail-content-start) - var(--witzi-detail-ribbon-inner-padding));
   margin-right: var(--witzi-detail-ribbon-edge);
   padding-left: var(--witzi-detail-ribbon-inner-padding);
   padding-right: clamp(1rem, 2.4vw, 2.25rem);
@@ -1420,7 +1457,7 @@ a[data-role="button"]:focus-visible {
 .layout-desktop[dir="rtl"] .detailRibbon,
 .layout-desktop [dir="rtl"] .detailRibbon {
   margin-left: var(--witzi-detail-ribbon-edge);
-  margin-right: calc(32.45vw - var(--witzi-detail-ribbon-inner-padding));
+  margin-right: calc(var(--witzi-detail-content-start) - var(--witzi-detail-ribbon-inner-padding));
   padding-left: clamp(1rem, 2.4vw, 2.25rem);
   padding-right: var(--witzi-detail-ribbon-inner-padding);
 }

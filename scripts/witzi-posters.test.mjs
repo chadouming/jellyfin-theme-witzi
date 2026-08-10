@@ -400,7 +400,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   assert.match(css, /\.layout-mobile \.cardOverlayButton-br\[data-action="play"\]\s*\{[^}]*display:\s*none\s*!important;/s);
 });
 
-test('compacts episode rows and separates the ribbon from detail artwork', async () => {
+test('compacts episode rows and anchors detail artwork beside scrolling content', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
 
   assert.match(
@@ -422,7 +422,7 @@ test('compacts episode rows and separates the ribbon from detail artwork', async
   );
   assert.match(
     css,
-    /margin-left:\s*calc\(32\.45vw - var\(--witzi-detail-ribbon-inner-padding\)\);/
+    /margin-left:\s*calc\(var\(--witzi-detail-content-start\) - var\(--witzi-detail-ribbon-inner-padding\)\);/
   );
   assert.match(css, /padding-left:\s*var\(--witzi-detail-ribbon-inner-padding\);/);
   assert.match(
@@ -443,12 +443,29 @@ test('compacts episode rows and separates the ribbon from detail artwork', async
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\)\s*\{[^}]*--witzi-detail-backdrop-height:\s*clamp\(15rem, 30vh, 20rem\);[^}]*--witzi-detail-logo-height:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(9\.75rem, min\(14vw, 26vh\), 13rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(2\.75rem, 7vh, 4\.25rem\);[^}]*--witzi-detail-content-start:/s
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) \.detailLogo\s*\{[^}]*background-size:\s*76% auto;[^}]*height:\s*var\(--witzi-detail-logo-height\);[^}]*top:\s*calc\(var\(--witzi-detail-backdrop-height\) - var\(--witzi-detail-poster-lift\) - var\(--witzi-detail-logo-height\) - var\(--witzi-detail-logo-gap\)\);/s
+    /\.layout-desktop #itemDetailPage \.detailLogo\s*\{[^}]*background-size:\s*contain;[^}]*height:\s*var\(--witzi-detail-logo-height\);[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-rail-top\);[^}]*width:\s*var\(--witzi-detail-rail-width\);/s
   );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*position:\s*fixed;[^}]*top:\s*calc\(var\(--witzi-detail-rail-top\) \+ var\(--witzi-detail-logo-height\) \+ var\(--witzi-detail-logo-gap\)\)\s*!important;[^}]*width:\s*var\(--witzi-detail-rail-width\)\s*!important;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage > \.detailLogo\.hide \+ \.detailPageWrapperContainer \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*top:\s*var\(--witzi-detail-rail-top\)\s*!important;/s
+  );
+  assert.match(
+    css,
+    /#itemDetailPage \.detailPagePrimaryContent,[\s\S]*#itemDetailPage \.detailPageSecondaryContainer\s*\{[^}]*padding-left:\s*var\(--witzi-detail-content-start\);/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\)\s*\{[^}]*--witzi-detail-backdrop-height:\s*clamp\(15rem, 30vh, 20rem\);/s
+  );
+  assert.doesNotMatch(css, /max-height:\s*64rem/);
   assert.match(
     css,
     /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) \.detailSectionContent \.overview\s*\{[^}]*-webkit-line-clamp:\s*3;/s
