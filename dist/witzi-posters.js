@@ -6,8 +6,8 @@
  * current Jellyfin ApiClient for each card's metadata and swaps in a real
  * poster. Episodes prefer the series' main Primary poster, then a season/parent
  * poster; their own widescreen Primary capture is never used. Movies use their
- * own portrait Primary poster. Generated landscape frames are hidden when no
- * real poster can be found.
+ * own portrait Primary poster. A candidate must load successfully before it
+ * replaces Jellyfin's native artwork, which remains visible as the last resort.
  */
 (function witziPosterHelper() {
   'use strict';
@@ -21,6 +21,7 @@
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
   const MISSING_RETRY_MS = 30000;
+  const POSTER_LOAD_TIMEOUT_MS = 8000;
   let retryTimer;
   let scheduled = false;
 
@@ -35,24 +36,22 @@
     return tag && item.Id && !isLandscapeFrame ? { id: item.Id, tag } : null;
   }
 
-  function inheritedPoster(item) {
-    if (item?.SeriesId) {
-      return {
+  function inheritedPosters(item) {
+    const candidates = [
+      item?.SeriesId && {
         id: item.SeriesId,
         tag: item.SeriesPrimaryImageTag || null
-      };
-    }
-
-    if (item?.ParentPrimaryImageItemId) {
-      return {
+      },
+      item?.ParentPrimaryImageItemId && {
         id: item.ParentPrimaryImageItemId,
         tag: item.ParentPrimaryImageTag || null
-      };
-    }
+      },
+      item?.SeasonId && { id: item.SeasonId, tag: null }
+    ].filter(Boolean);
 
-    if (item?.SeasonId) return { id: item.SeasonId, tag: null };
-
-    return null;
+    return candidates.filter((poster, index) => (
+      candidates.findIndex((candidate) => candidate.id === poster.id) === index
+    ));
   }
 
   function posterUrl(api, poster) {
@@ -92,6 +91,36 @@
       || Boolean(item?.SeriesId);
   }
 
+  function canLoad(url) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      let settled = false;
+
+      const finish = (loaded) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        resolve(loaded);
+      };
+
+      const timeout = window.setTimeout(() => finish(false), POSTER_LOAD_TIMEOUT_MS);
+      image.onload = () => finish(true);
+      image.onerror = () => finish(false);
+      image.src = url;
+    });
+  }
+
+  async function firstLoadablePoster(api, candidates) {
+    for (const poster of candidates) {
+      const url = posterUrl(api, poster);
+      if (await canLoad(url)) return url;
+    }
+
+    return null;
+  }
+
   async function resolvePosters(api, typeHints) {
     const ids = [...typeHints.keys()];
     const now = Date.now();
@@ -102,54 +131,22 @@
     if (missingIds.length) {
       const items = await fetchItems(api, missingIds);
       const itemsById = new Map(items.map((item) => [item.Id, item]));
-      const unresolvedEpisodes = [];
 
-      for (const id of missingIds) {
+      await Promise.all(missingIds.map(async (id) => {
         const item = itemsById.get(id);
-        let poster = null;
+        const own = item && ownPoster(item);
+        const candidates = isEpisode(item, typeHints.get(id))
+          ? inheritedPosters(item)
+          : own ? [own] : [];
+        const url = await firstLoadablePoster(api, candidates);
 
-        if (isEpisode(item, typeHints.get(id))) {
-          poster = inheritedPoster(item);
-          if (!poster) {
-            unresolvedEpisodes.push({
-              id,
-              parentIds: [...new Set([
-                item?.SeriesId,
-                item?.ParentPrimaryImageItemId,
-                item?.SeasonId
-              ].filter(Boolean))]
-            });
-            continue;
-          }
-        } else if (item) {
-          poster = ownPoster(item);
-        }
-
-        if (poster) {
-          itemCache.set(id, posterUrl(api, poster));
+        if (url) {
+          itemCache.set(id, url);
           retryAfter.delete(id);
         } else {
-          retryAfter.set(id, now + MISSING_RETRY_MS);
+          retryAfter.set(id, Date.now() + MISSING_RETRY_MS);
         }
-      }
-
-      if (unresolvedEpisodes.length) {
-        const parentIds = [...new Set(unresolvedEpisodes.flatMap((episode) => episode.parentIds))];
-        const parents = parentIds.length ? await fetchItems(api, parentIds) : [];
-        const parentsById = new Map(parents.map((item) => [item.Id, item]));
-
-        for (const episode of unresolvedEpisodes) {
-          const poster = episode.parentIds
-            .map((id) => ownPoster(parentsById.get(id)))
-            .find(Boolean);
-          if (poster) {
-            itemCache.set(episode.id, posterUrl(api, poster));
-            retryAfter.delete(episode.id);
-          } else {
-            retryAfter.set(episode.id, now + MISSING_RETRY_MS);
-          }
-        }
-      }
+      }));
     }
 
     return new Map(ids.map((id) => [id, itemCache.get(id) || null]));
@@ -180,6 +177,7 @@
     card.classList.add('witzi-poster-card');
     card.classList.remove('witzi-poster-pending');
     card.classList.remove('witzi-no-poster-card');
+    card.classList.remove('witzi-native-fallback');
     return true;
   }
 
@@ -188,17 +186,11 @@
   }
 
   function markMissing(card) {
-    const image = card.querySelector('.cardImageContainer');
-    if (image) {
-      image.removeAttribute?.('data-src');
-      image.style.backgroundImage = 'none';
-    }
-
-    card.dataset.witziArtwork = 'missing';
+    card.dataset.witziArtwork = 'fallback';
     card.dataset.witziPosterId = card.dataset.id;
     card.classList.remove('witzi-poster-card');
     card.classList.remove('witzi-poster-pending');
-    card.classList.add('witzi-no-poster-card');
+    card.classList.add('witzi-native-fallback');
   }
 
   function retryLater(delay = 1500) {
@@ -222,7 +214,7 @@
     if (url) return !hasAppliedPoster(card, url);
 
     return card.dataset.witziPosterId !== id
-      || card.dataset.witziArtwork !== 'missing'
+      || card.dataset.witziArtwork !== 'fallback'
       || Date.now() >= (retryAfter.get(id) || 0);
   }
 
@@ -251,12 +243,12 @@
         if (!url || !applyPoster(card, url)) markMissing(card);
       }
 
-      if (cards.some((card) => card.dataset.witziArtwork === 'missing')) {
+      if (cards.some((card) => card.dataset.witziArtwork === 'fallback')) {
         retryLater(MISSING_RETRY_MS);
       }
     } catch (error) {
       cards.forEach(markMissing);
-      console.warn('[witzi-posters] Poster lookup failed; hiding generated video frames.', error);
+      console.warn('[witzi-posters] Poster lookup failed; retaining native card artwork.', error);
       retryLater();
     } finally {
       cards.forEach((card) => pendingCards.delete(card));

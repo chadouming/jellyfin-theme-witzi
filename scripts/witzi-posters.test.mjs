@@ -39,7 +39,7 @@ function createCard(id, type) {
   };
 }
 
-test('uses real posters and never retains generated landscape frames', async () => {
+test('uses loadable posters and retains native artwork when candidates fail', async () => {
   const cards = [
     createCard('episode-inherited', 'Episode'),
     createCard('episode-parent-fetch', 'Episode'),
@@ -49,6 +49,7 @@ test('uses real posters and never retains generated landscape frames', async () 
     createCard('episode-no-poster', 'Episode')
   ];
   const calls = [];
+  const imageRequests = [];
   let observerCallback;
   let helperStatus;
 
@@ -71,7 +72,7 @@ test('uses real posters and never retains generated landscape frames', async () 
           Id: 'episode-parent-fetch',
           Type: 'Episode',
           SeasonId: 'season-2',
-          SeriesId: 'series-2'
+          SeriesId: 'series-without-poster'
         },
         {
           Id: 'episode-type-hint',
@@ -119,6 +120,13 @@ test('uses real posters and never retains generated landscape frames', async () 
 
   const context = {
     console,
+    Image: class {
+      set src(url) {
+        imageRequests.push(url);
+        const isLoadable = /\/Items\/(series-1|season-2|series-3|movie)\/Images\/Primary/.test(url);
+        setTimeout(() => (isLoadable ? this.onload?.() : this.onerror?.()), 0);
+      }
+    },
     document: {
       readyState: 'complete',
       documentElement: {
@@ -151,6 +159,8 @@ test('uses real posters and never retains generated landscape frames', async () 
   assert.equal(helperStatus, 'active');
   assert.equal(calls.length, 1);
   assert.match(calls[0], /episode-inherited/);
+  assert.equal(imageRequests.some((url) => url.includes('/Items/series-without-poster/Images/Primary')), true);
+  assert.equal(imageRequests.some((url) => url.includes('/Items/season-2/Images/Primary')), true);
 
   for (const card of cards.slice(0, 4)) {
     assert.equal(card.dataset.witziArtwork, 'poster');
@@ -159,16 +169,16 @@ test('uses real posters and never retains generated landscape frames', async () 
   }
 
   assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
-  assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/series-2\/Images\/Primary/);
+  assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/season-2\/Images\/Primary/);
   assert.match(cards[2].image.getAttribute('data-src'), /\/Items\/series-3\/Images\/Primary/);
   assert.match(cards[3].image.getAttribute('data-src'), /\/Items\/movie\/Images\/Primary/);
 
   for (const fallback of cards.slice(4)) {
-    assert.equal(fallback.dataset.witziArtwork, 'missing');
+    assert.equal(fallback.dataset.witziArtwork, 'fallback');
     assert.equal(fallback.classList.contains('witzi-poster-card'), false);
-    assert.equal(fallback.classList.contains('witzi-no-poster-card'), true);
-    assert.equal(fallback.image.getAttribute('data-src'), undefined);
-    assert.equal(fallback.image.style.backgroundImage, 'none');
+    assert.equal(fallback.classList.contains('witzi-native-fallback'), true);
+    assert.match(fallback.image.getAttribute('data-src'), /\/Images\/Backdrop/);
+    assert.match(fallback.image.style.backgroundImage, /\/Images\/Backdrop/);
   }
 
   cards[0].image.setAttribute('data-src', 'https://jellyfin.test/Items/episode-inherited/Images/Backdrop');
@@ -209,7 +219,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
     /\.cardPadder-backdrop,[\s\S]*padding-bottom:\s*150%\s*!important;/
   );
   assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
-  assert.match(css, /\.witzi-no-poster-card \.cardImageContainer/);
+  assert.doesNotMatch(css, /\.witzi-no-poster-card \.cardImageContainer/);
   assert.match(css, /\[data-monitor\*="videoplayback"\]\[data-monitor\*="markplayed"\]/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);

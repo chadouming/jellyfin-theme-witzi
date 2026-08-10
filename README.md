@@ -59,9 +59,9 @@ Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the
 
 - the series' main Primary poster for an episode, falling back to its season/parent poster;
 - the item's own portrait Primary poster for a movie; or
-- a clean poster placeholder when no real poster exists or the lookup fails, never a generated video frame.
+- Jellyfin's native artwork, contained without cropping, only when every poster candidate fails to load.
 
-The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, requests the series Primary endpoint directly, retries incomplete poster metadata, and rejects landscape Primary images so generated frames are not stretched into portrait cards.
+The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each series then season/parent Primary candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 

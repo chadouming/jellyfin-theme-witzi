@@ -577,9 +577,9 @@ html.transparentDocument #reactRoot {
 /*
  * Continue Watching and Next Up always use the portrait geometry from Recently
  * Added. The optional Witzi poster helper replaces their artwork with a real
- * season, series, or movie poster. Episode frames are hidden while the helper
- * resolves their parent poster. Jellyfin assigns both playback and mark-played
- * monitor hints to these sections, which avoids fragile title selectors.
+ * season, series, or movie poster after verifying the replacement image loads.
+ * Jellyfin assigns both playback and mark-played monitor hints to these
+ * sections, which avoids fragile title selectors.
  */
 .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
   width: 33.3333333333% !important;
@@ -602,19 +602,6 @@ html.transparentDocument #reactRoot {
 }
 
 .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .blurhash-canvas {
-  opacity: 0 !important;
-}
-
-/* Never stretch a generated video frame into a portrait fallback. */
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-type="Episode"]:not(.witzi-poster-card) .cardImageContainer,
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-pending .cardImageContainer,
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-no-poster-card .cardImageContainer {
-  background-image: none !important;
-}
-
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-type="Episode"]:not(.witzi-poster-card) .blurhash-canvas,
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-pending .blurhash-canvas,
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-no-poster-card .blurhash-canvas {
   opacity: 0 !important;
 }
 
