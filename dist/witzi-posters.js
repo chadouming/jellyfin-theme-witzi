@@ -27,11 +27,13 @@
   const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
   const BACKDROP_SELECTOR = '.backdropContainer';
   const DETAIL_PAGE_SELECTOR = '#itemDetailPage';
+  const DETAIL_RIBBON_ALIGN_OFFSET = '--witzi-detail-ribbon-align-offset';
   const THEME_WAIT_INITIAL_MS = 250;
   const THEME_WAIT_MAX_MS = 5000;
   const itemCache = new Map();
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
+  const alignedDetailRibbons = new WeakSet();
   const MISSING_RETRY_MS = 30000;
   const POSTER_LOAD_TIMEOUT_MS = 8000;
   const BACKDROP_LOAD_TIMEOUT_MS = 12000;
@@ -441,6 +443,28 @@
     }
   }
 
+  function alignDetailRibbonOnce(page, ribbon) {
+    if (alignedDetailRibbons.has(ribbon) || page?.classList?.contains?.('hide')) return;
+
+    const poster = page?.querySelector?.('.detailImageContainer.hide-mobile .cardBox')
+      || page?.querySelector?.('.detailImageContainer.hide-mobile .card');
+    if (!poster?.getBoundingClientRect || !ribbon?.getBoundingClientRect || !ribbon.style?.setProperty) return;
+
+    const posterRect = poster.getBoundingClientRect();
+    const ribbonRect = ribbon.getBoundingClientRect();
+    if (!posterRect.width || !posterRect.height || !ribbonRect.width || !ribbonRect.height) return;
+
+    const offset = Math.round((posterRect.top - ribbonRect.top) * 100) / 100;
+    if (!Number.isFinite(offset)) return;
+
+    if (Math.abs(offset) > 0.5) {
+      ribbon.style.setProperty(DETAIL_RIBBON_ALIGN_OFFSET, `${offset}px`);
+    }
+
+    alignedDetailRibbons.add(ribbon);
+    page.setAttribute?.('data-witzi-ribbon-aligned', 'true');
+  }
+
   function syncDetailRibbonPage(page) {
     const ribbon = page?.querySelector?.('.detailRibbon');
     if (!page || !ribbon) return;
@@ -484,6 +508,7 @@
 
     if (contentIsComplete) {
       page.setAttribute('data-witzi-detail-content', 'active');
+      alignDetailRibbonOnce(page, ribbon);
     } else if (content.length) {
       page.setAttribute('data-witzi-detail-content', 'pending');
     } else {

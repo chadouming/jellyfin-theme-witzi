@@ -430,6 +430,13 @@ test('moves all live detail content into one ribbon panel', async () => {
   let groups = [group];
   let observerCallback = null;
   let detailQueryCount = 0;
+  let ribbonOffset = 0;
+  let ribbonStyleWrites = 0;
+  const poster = {
+    getBoundingClientRect() {
+      return { height: 300, top: 64, width: 200 };
+    }
+  };
   const ribbon = {
     children: [info, buttons],
     contains(child) {
@@ -457,6 +464,16 @@ test('moves all live detail content into one ribbon panel', async () => {
       if (selector === '.witzi-ribbon-content') return null;
       if (selector === '.mainDetailButtons') return buttons;
       return null;
+    },
+    getBoundingClientRect() {
+      return { height: 180, top: 80 + ribbonOffset, width: 800 };
+    },
+    style: {
+      setProperty(name, value) {
+        assert.equal(name, '--witzi-detail-ribbon-align-offset');
+        ribbonStyleWrites += 1;
+        ribbonOffset = Number.parseFloat(value);
+      }
     }
   };
   info.parentNode = ribbon;
@@ -469,6 +486,7 @@ test('moves all live detail content into one ribbon panel', async () => {
       if (selector === '.mainDetailButtons') return buttonGroups[0] || null;
       if (selector === '.detailSectionContent') return sectionContents[0] || null;
       if (selector === '.itemDetailsGroup') return groups[0] || null;
+      if (selector === '.detailImageContainer.hide-mobile .cardBox') return poster;
       return null;
     },
     querySelectorAll(selector) {
@@ -549,12 +567,16 @@ test('moves all live detail content into one ribbon panel', async () => {
   assert.equal(overview.parentNode, sectionContent);
   assert.equal(overviewControls.parentNode, sectionContent);
   assert.equal(pageAttributes.get('data-witzi-detail-content'), 'active');
+  assert.equal(pageAttributes.get('data-witzi-ribbon-aligned'), 'true');
+  assert.equal(ribbonOffset, -16);
+  assert.equal(ribbonStyleWrites, 1);
 
   await new Promise((resolve) => setTimeout(resolve, 70));
   const queriesBeforeStyleMutation = detailQueryCount;
   observerCallback([{ type: 'attributes', attributeName: 'style' }]);
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(detailQueryCount, queriesBeforeStyleMutation);
+  assert.equal(ribbonStyleWrites, 1);
 
   const replacementOverview = {
     name: 'replacement-overview',
@@ -593,6 +615,7 @@ test('moves all live detail content into one ribbon panel', async () => {
   assert.equal(replacementButtons.parentNode, ribbon);
   assert.equal(replacementSection.parentNode, ribbon);
   assert.equal(replacementGroup.parentNode, ribbon);
+  assert.equal(ribbonStyleWrites, 1);
 });
 
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
@@ -679,7 +702,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*flex\s*!important;[^}]*flex-direction:\s*column;[^}]*gap:\s*0\.12rem;[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(\s*var\(--witzi-detail-top-padding\)\s*-\s*var\(--witzi-detail-backdrop-height\)\s*-\s*var\(--witzi-header-height\)\s*\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0\.65rem 0;/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*flex\s*!important;[^}]*flex-direction:\s*column;[^}]*gap:\s*0\.12rem;[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(\s*var\(--witzi-detail-top-padding\)\s*-\s*var\(--witzi-detail-backdrop-height\)\s*-\s*var\(--witzi-header-height\)\s*\+\s*var\(--witzi-detail-ribbon-align-offset, 0px\)\s*\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0\.65rem 0;/s
   );
   assert.match(
     css,
@@ -832,7 +855,12 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     /#itemDetailPage\[data-witzi-detail-content="active"\]:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
   );
   assert.match(helper, /function detailContentCandidate\(page, host, selector, sourceSelector = selector\)/);
-  assert.doesNotMatch(helper, /DETAIL_RIBBON_CORRECTION|getBoundingClientRect|style\.setProperty/);
+  assert.doesNotMatch(helper, /DETAIL_RIBBON_CORRECTION/);
+  assert.match(helper, /const alignedDetailRibbons = new WeakSet\(\);/);
+  assert.match(helper, /function alignDetailRibbonOnce\(page, ribbon\)/);
+  assert.match(helper, /if \(alignedDetailRibbons\.has\(ribbon\)/);
+  assert.match(helper, /ribbon\.style\.setProperty\(DETAIL_RIBBON_ALIGN_OFFSET, `\$\{offset\}px`\)/);
+  assert.match(helper, /alignedDetailRibbons\.add\(ribbon\);/);
   assert.match(helper, /function scheduleDetail\(\)/);
   assert.match(helper, /function scheduleMedia\(\)/);
   assert.match(helper, /function mutationChangesDetailLayout\(mutation\)/);

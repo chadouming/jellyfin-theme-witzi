@@ -1637,6 +1637,7 @@ a[data-role="button"]:focus-visible {
     var(--witzi-detail-top-padding)
     - var(--witzi-detail-backdrop-height)
     - var(--witzi-header-height)
+    + var(--witzi-detail-ribbon-align-offset, 0px)
   ) !important;
   max-width: none;
   min-height: clamp(7.6rem, 15vh, 9rem);
