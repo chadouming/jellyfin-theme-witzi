@@ -1497,10 +1497,6 @@ a[data-role="button"]:focus-visible {
   overflow: hidden;
 }
 
-.layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) .itemDetailsGroup {
-  margin-top: 0.75rem;
-}
-
 .layout-desktop #itemDetailPage:has(#listChildrenCollapsible:not(.hide) .listItem[data-type="Episode"]) #listChildrenCollapsible {
   margin-top: 0;
 }
@@ -1513,15 +1509,22 @@ a[data-role="button"]:focus-visible {
   grid-auto-rows: auto;
   grid-template-areas:
     "info actions"
-    "content actions";
+    "content content";
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
   height: auto !important;
   margin-top: calc(var(--witzi-detail-poster-top) - var(--witzi-detail-backdrop-height)) !important;
+  max-width: none;
   min-height: clamp(7.6rem, 15vh, 9rem);
-  overflow: visible;
+  overflow: hidden;
   padding-block: 0.65rem 0;
   row-gap: 0.15rem;
+}
+
+.layout-desktop #itemDetailPage .detailRibbon > :is(.infoWrapper, .mainDetailButtons, .witzi-ribbon-content) {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .layout-desktop[dir="ltr"] .detailRibbon,
@@ -1563,7 +1566,10 @@ a[data-role="button"]:focus-visible {
   border-right: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
   box-sizing: border-box;
   margin: 0 !important;
+  max-width: 100% !important;
   min-width: 0;
+  overflow: hidden;
+  width: 100% !important;
 }
 
 .layout-desktop #itemDetailPage:not([data-witzi-detail-content="active"]) .detailSectionContent {
@@ -1612,6 +1618,7 @@ a[data-role="button"]:focus-visible {
 .detailRibbon .infoWrapper {
   align-self: center;
   grid-area: info;
+  overflow: hidden;
 }
 
 .detailRibbon .infoWrapper .itemMiscInfo {
@@ -1627,15 +1634,19 @@ a[data-role="button"]:focus-visible {
   flex-wrap: wrap;
   gap: 0.12rem;
   grid-area: actions;
+  justify-content: flex-end;
   margin-block: 0.55rem 0.25rem;
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content {
   align-self: stretch;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.12rem;
   grid-area: content;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
+  width: 100%;
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content:empty {
@@ -1645,9 +1656,23 @@ a[data-role="button"]:focus-visible {
 .layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent {
   background-color: transparent !important;
   background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
   display: grid;
   gap: 0.25rem;
-  margin: 0;
+  margin: 0 !important;
+  max-width: 100% !important;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+.layout-desktop #itemDetailPage .witzi-ribbon-content .detailSectionContent > * {
+  box-sizing: border-box;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -1673,17 +1698,28 @@ a[data-role="button"]:focus-visible {
   align-items: stretch;
   background-color: transparent !important;
   background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
   gap: 0.28rem;
-  margin: 0;
+  margin: 0 !important;
+  max-width: 100% !important;
   min-width: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  width: 100% !important;
 }
 
 .layout-desktop #itemDetailPage .itemDetailsGroup > .MuiBox-root.css-0,
 .layout-desktop #itemDetailPage .itemDetailsGroup .detailsGroupItem.MuiBox-root.css-0 {
   box-sizing: border-box;
+  max-width: 100% !important;
+  min-width: 0;
+  overflow-wrap: anywhere;
   width: 100%;
 }
 
@@ -1713,7 +1749,9 @@ a[data-role="button"]:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .layout-desktop #itemDetailPage .witzi-ribbon-content .button-link {

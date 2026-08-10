@@ -534,7 +534,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid\s*!important;[^}]*"content actions";[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*padding-block:\s*0\.65rem 0;/s
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*display:\s*grid\s*!important;[^}]*"content content";[^}]*height:\s*auto\s*!important;[^}]*margin-top:\s*calc\(var\(--witzi-detail-poster-top\) - var\(--witzi-detail-backdrop-height\)\)\s*!important;[^}]*min-height:\s*clamp\(7\.6rem, 15vh, 9rem\);[^}]*overflow:\s*hidden;[^}]*padding-block:\s*0\.65rem 0;/s
   );
   assert.match(
     css,
@@ -619,6 +619,10 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     css,
     /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) #listChildrenCollapsible\s*\{[^}]*margin-top:\s*0;/s
   );
+  assert.doesNotMatch(
+    css,
+    /#itemDetailPage:has\(#listChildrenCollapsible:not\(\.hide\) \.listItem\[data-type="Episode"\]\) \.itemDetailsGroup\s*\{[^}]*margin-top:/s
+  );
   assert.match(
     css,
     /#itemDetailPage \.itemTags,[\s\S]*#itemDetailPage \.itemExternalLinks,[\s\S]*#itemDetailPage \.itemGenres\s*\{[^}]*display:\s*none\s*!important;/s
@@ -633,7 +637,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailSectionContent,[\s\S]*#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*border-left:[^}]*margin:\s*0\s*!important;/s
+    /#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.detailSectionContent,[\s\S]*#itemDetailPage:not\(\[data-witzi-detail-content="active"\]\) \.itemDetailsGroup\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*border-left:[^}]*margin:\s*0\s*!important;[^}]*max-width:\s*100%\s*!important;[^}]*overflow:\s*hidden;[^}]*width:\s*100%\s*!important;/s
   );
   assert.match(
     css,
@@ -642,11 +646,15 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(css, /\.witzi-ribbon-content \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
-    /\.witzi-ribbon-content \.detailSectionContent\s*\{[^}]*background-color:\s*transparent\s*!important;[^}]*background-image:\s*none\s*!important;[^}]*display:\s*grid;[^}]*margin:\s*0;/s
+    /\.witzi-ribbon-content \.detailSectionContent\s*\{[^}]*background-color:\s*transparent\s*!important;[^}]*border:\s*0\s*!important;[^}]*box-sizing:\s*border-box;[^}]*display:\s*grid;[^}]*margin:\s*0\s*!important;[^}]*max-width:\s*100%\s*!important;[^}]*overflow:\s*hidden;[^}]*width:\s*100%\s*!important;/s
   );
   assert.match(
     css,
-    /\.witzi-ribbon-content \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;[^}]*margin:\s*0;/s
+    /\.witzi-ribbon-content \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*border:\s*0\s*!important;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;[^}]*margin:\s*0\s*!important;[^}]*max-width:\s*100%\s*!important;[^}]*overflow:\s*hidden;[^}]*width:\s*100%\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.witzi-ribbon-content\s*\{[^}]*gap:\s*0\.12rem;[^}]*max-width:\s*100%;[^}]*overflow:\s*hidden;[^}]*width:\s*100%;/s
   );
   assert.match(
     css,
