@@ -61,23 +61,25 @@ Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the
 - the item's own portrait Primary poster for a movie; or
 - a clean poster placeholder when no real poster exists or the lookup fails, never a generated video frame.
 
-The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, retries incomplete poster metadata, and rejects landscape Primary images so generated frames are not stretched into portrait cards.
+The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, requests the series Primary endpoint directly, retries incomplete poster metadata, and rejects landscape Primary images so generated frames are not stretched into portrait cards.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 
 ```js
 (function () {
   const script = document.createElement('script');
-  script.src = 'https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-posters.js';
+  script.src = `https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-posters.js?v=${Date.now()}`;
   document.head.appendChild(script);
 }());
 ```
 
-Pasting the full file keeps the code local and pinned. Using the hosted loader follows future updates after a browser refresh. The helper changes card artwork only in Jellyfin Web surfaces where JavaScript injection is active; native clients keep their own layout.
+Pasting the full file keeps the code local and pinned, so it must be replaced after helper updates. The hosted loader cache-busts on each page load and follows future updates automatically. The helper changes card artwork only in Jellyfin Web surfaces where JavaScript injection is active; native clients keep their own layout.
+
+If an episode frame is still visible, run `document.documentElement.dataset.witziPosters` in the browser console. It returns `"active"` when the current helper is running; any other result means the JavaScript Injector entry is missing, disabled, or still contains an older pasted copy.
 
 ### Backdrops
 
-Enable **Settings → Display → Backdrops** for each Jellyfin Web client where you want dynamic artwork. Witzi leaves Jellyfin's `.backdropImage` unobscured and makes the page canvas transparent while an internal or wrapper-provided backdrop is active. Backdrop-less pages continue to use the Witzi pattern.
+Enable **Settings → Display → Backdrops** for each Jellyfin Web client where you want dynamic artwork. Witzi makes the page canvas transparent while an internal or wrapper-provided backdrop is active. Internal Jellyfin artwork receives Witzi's palette-colored base, soft `2.5px` blur, gentle desaturation, accent glow, and slight scale-up; backdrop-less pages continue to use the Witzi pattern.
 
 ## Compatibility
 

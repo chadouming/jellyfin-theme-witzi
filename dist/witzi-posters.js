@@ -14,8 +14,9 @@
 
   if (window.__witziPosterHelperLoaded) return;
   window.__witziPosterHelperLoaded = true;
+  document.documentElement?.setAttribute?.('data-witzi-posters', 'active');
 
-  const CARD_SELECTOR = '.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .card[data-id]';
+  const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
   const itemCache = new Map();
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
@@ -35,19 +36,21 @@
   }
 
   function inheritedPoster(item) {
-    if (item?.SeriesId && item.SeriesPrimaryImageTag) {
+    if (item?.SeriesId) {
       return {
         id: item.SeriesId,
-        tag: item.SeriesPrimaryImageTag
+        tag: item.SeriesPrimaryImageTag || null
       };
     }
 
-    if (item?.ParentPrimaryImageItemId && item.ParentPrimaryImageTag) {
+    if (item?.ParentPrimaryImageItemId) {
       return {
         id: item.ParentPrimaryImageItemId,
-        tag: item.ParentPrimaryImageTag
+        tag: item.ParentPrimaryImageTag || null
       };
     }
+
+    if (item?.SeasonId) return { id: item.SeasonId, tag: null };
 
     return null;
   }
@@ -55,10 +58,11 @@
   function posterUrl(api, poster) {
     const options = {
       type: 'Primary',
-      tag: poster.tag,
       maxWidth: 600,
       quality: 90
     };
+
+    if (poster.tag) options.tag = poster.tag;
 
     return typeof api.getScaledImageUrl === 'function'
       ? api.getScaledImageUrl(poster.id, options)
@@ -83,7 +87,9 @@
   }
 
   function isEpisode(item, typeHint) {
-    return typeHint === 'Episode' || item?.Type === 'Episode' || Boolean(item?.SeriesId);
+    return typeHint?.toLowerCase() === 'episode'
+      || item?.Type?.toLowerCase() === 'episode'
+      || Boolean(item?.SeriesId);
   }
 
   async function resolvePosters(api, typeHints) {
@@ -154,6 +160,8 @@
     if (!image) return false;
 
     image.setAttribute('data-src', url);
+    image.removeAttribute?.('data-blurhash');
+    image.classList?.remove('lazy');
     image.style.backgroundImage = `url("${url.replace(/["\\]/g, '\\$&')}")`;
     image.style.backgroundPosition = 'center';
     image.style.backgroundRepeat = 'no-repeat';

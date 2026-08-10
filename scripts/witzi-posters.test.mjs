@@ -50,6 +50,7 @@ test('uses real posters and never retains generated landscape frames', async () 
   ];
   const calls = [];
   let observerCallback;
+  let helperStatus;
 
   const api = {
     getCurrentUserId: () => 'user-1',
@@ -120,7 +121,11 @@ test('uses real posters and never retains generated landscape frames', async () 
     console,
     document: {
       readyState: 'complete',
-      documentElement: {},
+      documentElement: {
+        setAttribute(name, value) {
+          if (name === 'data-witzi-posters') helperStatus = value;
+        }
+      },
       querySelectorAll: () => cards,
       addEventListener() {}
     },
@@ -143,9 +148,9 @@ test('uses real posters and never retains generated landscape frames', async () 
   vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 30));
 
-  assert.equal(calls.length, 2);
+  assert.equal(helperStatus, 'active');
+  assert.equal(calls.length, 1);
   assert.match(calls[0], /episode-inherited/);
-  assert.equal(calls[1], 'series-2,season-2,series-3');
 
   for (const card of cards.slice(0, 4)) {
     assert.equal(card.dataset.witziArtwork, 'poster');
@@ -172,7 +177,7 @@ test('uses real posters and never retains generated landscape frames', async () 
   await new Promise((resolve) => setTimeout(resolve, 10));
 
   assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 1);
 });
 
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
@@ -192,6 +197,11 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.match(
     css,
+    /\.backdropImage\s*\{[^}]*filter:\s*blur\(2\.5px\) saturate\(0\.9\);[^}]*transform:\s*scale\(1\.025\);/s
+  );
+  assert.match(css, /@keyframes witzi-backdrop-fadein/);
+  assert.match(
+    css,
     /> \.backdropCard\s*\{\s*width:\s*33\.3333333333%\s*!important;/
   );
   assert.match(
@@ -200,6 +210,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
   assert.match(css, /\.witzi-no-poster-card \.cardImageContainer/);
+  assert.match(css, /\[data-monitor\*="videoplayback"\]\[data-monitor\*="markplayed"\]/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);

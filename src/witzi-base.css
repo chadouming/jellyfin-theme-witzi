@@ -159,6 +159,41 @@ html.transparentDocument #reactRoot {
   background: transparent !important;
 }
 
+/* Witzi's colored, softly blurred pattern treatment applied to media art. */
+.backdropContainer {
+  background-color: var(--witzi-bg) !important;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.backdropContainer::after {
+  background:
+    radial-gradient(circle at 14% 4%, rgb(var(--witzi-accent-rgb) / 0.24), transparent 42%),
+    radial-gradient(circle at 86% 16%, rgb(var(--witzi-accent-alt-rgb) / 0.18), transparent 38%),
+    linear-gradient(180deg, rgb(var(--witzi-bg-rgb) / 0.06), rgb(var(--witzi-bg-rgb) / 0.28));
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.backdropImage {
+  filter: blur(2.5px) saturate(0.9);
+  opacity: 0.66;
+  transform: scale(1.025);
+  transform-origin: center;
+}
+
+.backdropImage.backdropImageFadeIn {
+  animation-name: witzi-backdrop-fadein !important;
+}
+
+@keyframes witzi-backdrop-fadein {
+  from { opacity: 0; }
+  to { opacity: 0.66; }
+}
+
 /* Header and navigation. */
 .skinHeader,
 .skinHeader-withBackground,
@@ -502,9 +537,9 @@ html.transparentDocument #reactRoot {
 /*
  * Continue Watching and Next Up always use the portrait geometry from Recently
  * Added. The optional Witzi poster helper replaces their artwork with a real
- * season, series, or movie poster. Without it, landscape artwork is contained
- * inside the portrait frame instead of being cropped. The data-monitor value is
- * assigned by Jellyfin to both sections and avoids fragile title selectors.
+ * season, series, or movie poster. Episode frames are hidden while the helper
+ * resolves their parent poster. Jellyfin assigns both playback and mark-played
+ * monitor hints to these sections, which avoids fragile title selectors.
  */
 .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
   width: 33.3333333333% !important;
@@ -520,24 +555,26 @@ html.transparentDocument #reactRoot {
   padding-bottom: 150% !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .card:not(.witzi-poster-card) .cardImageContainer {
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card:not(.witzi-poster-card) .cardImageContainer {
   background-position: center !important;
   background-repeat: no-repeat !important;
   background-size: contain !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-card .blurhash-canvas {
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .blurhash-canvas {
   opacity: 0 !important;
 }
 
 /* Never stretch a generated video frame into a portrait fallback. */
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-pending .cardImageContainer,
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-no-poster-card .cardImageContainer {
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-type="Episode"]:not(.witzi-poster-card) .cardImageContainer,
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-pending .cardImageContainer,
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-no-poster-card .cardImageContainer {
   background-image: none !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-pending .blurhash-canvas,
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-no-poster-card .blurhash-canvas {
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-type="Episode"]:not(.witzi-poster-card) .blurhash-canvas,
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-pending .blurhash-canvas,
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-no-poster-card .blurhash-canvas {
   opacity: 0 !important;
 }
 
