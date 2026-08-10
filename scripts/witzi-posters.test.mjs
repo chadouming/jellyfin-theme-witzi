@@ -422,7 +422,7 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /margin-left:\s*calc\(var\(--witzi-detail-content-start\) - var\(--witzi-detail-ribbon-inner-padding\)\);/
+    /margin-left:\s*var\(--witzi-detail-content-start\);/
   );
   assert.match(css, /padding-left:\s*var\(--witzi-detail-ribbon-inner-padding\);/);
   assert.match(
@@ -443,7 +443,11 @@ test('compacts episode rows and anchors detail artwork beside scrolling content'
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(9\.75rem, min\(14vw, 26vh\), 13rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(2\.75rem, 7vh, 4\.25rem\);[^}]*--witzi-detail-content-start:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(10rem, min\(28vw, 48vh\), 26rem\);[^}]*--witzi-detail-logo-height:\s*clamp\(2\.75rem, 7vh, 4\.25rem\);[^}]*--witzi-detail-content-start:/s
+  );
+  assert.doesNotMatch(
+    css,
+    /margin-(?:left|right):\s*calc\(var\(--witzi-detail-content-start\) - var\(--witzi-detail-ribbon-inner-padding\)\);/
   );
   assert.match(
     css,

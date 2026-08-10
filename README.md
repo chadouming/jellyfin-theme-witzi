@@ -15,7 +15,7 @@ The default is Catppuccin Mocha. Six matching variants are included:
 | Dracula | Gothic violet and pink | `dist/witzi-dracula.css` |
 | Gruvbox | Warm retro gold and orange | `dist/witzi-gruvbox.css` |
 
-Desktop detail pages anchor the media logo above a smaller poster in a fixed left rail, while the information ribbon, synopsis, episode rows, and secondary sections scroll beside it. Season pages also compact the synopsis area so 16:9 episode rows begin higher on screen.
+Desktop detail pages anchor the media logo above a large, viewport-aware poster in a fixed left rail, while the information ribbon, synopsis, episode rows, and secondary sections scroll beside it without overlapping the artwork. Season pages also compact the synopsis area so 16:9 episode rows begin higher on screen.
 
 ## Install
 

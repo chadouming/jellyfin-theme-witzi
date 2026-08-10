@@ -1342,7 +1342,7 @@ a[data-role="button"]:focus-visible {
   --witzi-detail-backdrop-height: clamp(15rem, 32vh, 21rem);
   --witzi-detail-rail-edge: clamp(1rem, 3.3vw, 3.5rem);
   --witzi-detail-rail-gap: clamp(1rem, 1.8vw, 1.6rem);
-  --witzi-detail-rail-width: clamp(9.75rem, min(14vw, 26vh), 13rem);
+  --witzi-detail-rail-width: clamp(10rem, min(28vw, 48vh), 26rem);
   --witzi-detail-rail-top: calc(var(--witzi-header-height) + clamp(0.85rem, 2vh, 1.25rem));
   --witzi-detail-logo-gap: 0.5rem;
   --witzi-detail-logo-height: clamp(2.75rem, 7vh, 4.25rem);
@@ -1448,7 +1448,7 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop[dir="ltr"] .detailRibbon,
 .layout-desktop [dir="ltr"] .detailRibbon {
-  margin-left: calc(var(--witzi-detail-content-start) - var(--witzi-detail-ribbon-inner-padding));
+  margin-left: var(--witzi-detail-content-start);
   margin-right: var(--witzi-detail-ribbon-edge);
   padding-left: var(--witzi-detail-ribbon-inner-padding);
   padding-right: clamp(1rem, 2.4vw, 2.25rem);
@@ -1457,7 +1457,7 @@ a[data-role="button"]:focus-visible {
 .layout-desktop[dir="rtl"] .detailRibbon,
 .layout-desktop [dir="rtl"] .detailRibbon {
   margin-left: var(--witzi-detail-ribbon-edge);
-  margin-right: calc(var(--witzi-detail-content-start) - var(--witzi-detail-ribbon-inner-padding));
+  margin-right: var(--witzi-detail-content-start);
   padding-left: clamp(1rem, 2.4vw, 2.25rem);
   padding-right: var(--witzi-detail-ribbon-inner-padding);
 }
