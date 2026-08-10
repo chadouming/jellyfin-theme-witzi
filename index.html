@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Witzi's playful card-table visual system, adapted for Jellyfin Web in six color variants.">
+  <meta name="theme-color" content="#1e1e2e">
+  <title>Witzi for Jellyfin</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #11111b;
+      --surface: #1e1e2e;
+      --surface-raised: #313244;
+      --border: #45475a;
+      --text: #cdd6f4;
+      --muted: #a6adc8;
+      --accent: #cba6f7;
+      --alt: #89b4fa;
+      font-family: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background:
+        radial-gradient(circle at 12% 0%, rgb(203 166 247 / 0.14), transparent 30rem),
+        radial-gradient(circle at 88% 20%, rgb(137 180 250 / 0.1), transparent 28rem),
+        var(--page);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    a { color: inherit; }
+
+    button,
+    code { font: inherit; }
+
+    .shell {
+      margin: 0 auto;
+      max-width: 76rem;
+      padding: 0 1.25rem;
+    }
+
+    .site-header {
+      align-items: center;
+      backdrop-filter: blur(16px);
+      background: rgb(17 17 27 / 0.72);
+      border-bottom: 1px solid rgb(88 91 112 / 0.55);
+      display: flex;
+      justify-content: space-between;
+      padding: 0.85rem max(1.25rem, calc((100vw - 73.5rem) / 2));
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      align-items: center;
+      display: inline-flex;
+      font-size: 1.08rem;
+      font-weight: 750;
+      gap: 0.65rem;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      align-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--alt));
+      border-radius: 0.55rem;
+      color: #1e1e2e;
+      display: inline-flex;
+      height: 2rem;
+      justify-content: center;
+      transform: rotate(45deg);
+      width: 2rem;
+    }
+
+    .brand-mark span { transform: rotate(-45deg); }
+
+    .nav-links { display: flex; gap: 0.55rem; }
+
+    .nav-link,
+    .button {
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 0.55rem;
+      display: inline-flex;
+      font-weight: 650;
+      justify-content: center;
+      min-height: 2.5rem;
+      padding: 0.55rem 0.9rem;
+      text-decoration: none;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .nav-link:hover,
+    .button:hover {
+      background: rgb(203 166 247 / 0.1);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .button-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #1e1e2e;
+    }
+
+    .button-primary:hover {
+      background: #dac1fa;
+      color: #1e1e2e;
+    }
+
+    .hero {
+      align-items: center;
+      display: grid;
+      gap: clamp(2rem, 6vw, 5rem);
+      grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.85fr);
+      min-height: 36rem;
+      padding-block: clamp(4rem, 9vw, 7rem);
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.13em;
+      margin: 0 0 1rem;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 8vw, 6.5rem);
+      letter-spacing: -0.065em;
+      line-height: 0.9;
+      margin: 0;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent), var(--alt));
+      background-clip: text;
+      color: transparent;
+    }
+
+    .lede {
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      line-height: 1.65;
+      margin: 1.5rem 0 2rem;
+      max-width: 42rem;
+    }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+    .hero-card {
+      background: var(--surface-raised) url("./assets/pattern-mocha.svg") repeat;
+      background-size: 120px 120px;
+      border: 2px solid var(--border);
+      border-radius: 1rem;
+      box-shadow: 0 24px 70px rgb(0 0 0 / 0.38);
+      padding: 1rem;
+      position: relative;
+      transform: rotate(2deg);
+    }
+
+    .hero-card::before {
+      border: 1px solid rgb(205 214 244 / 0.14);
+      border-radius: 0.72rem;
+      content: "";
+      inset: 0.28rem;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    .mock-header {
+      align-items: center;
+      background: rgb(49 50 68 / 0.94);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      display: flex;
+      gap: 0.4rem;
+      height: 2.5rem;
+      padding: 0 0.75rem;
+    }
+
+    .mock-dot {
+      background: var(--border);
+      border-radius: 50%;
+      height: 0.55rem;
+      width: 0.55rem;
+    }
+
+    .mock-dot:first-child { background: var(--accent); }
+
+    .mock-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      margin: 1.25rem 0 0.65rem;
+    }
+
+    .mock-row { display: grid; gap: 0.65rem; grid-template-columns: repeat(3, 1fr); }
+
+    .mock-poster {
+      aspect-ratio: 2 / 3;
+      background:
+        linear-gradient(145deg, rgb(203 166 247 / 0.8), rgb(137 180 250 / 0.34)),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      box-shadow: 0 4px 14px rgb(0 0 0 / 0.24), inset 0 0 0 3px rgb(30 30 46 / 0.26);
+      position: relative;
+    }
+
+    .mock-poster:nth-child(2) {
+      background: linear-gradient(145deg, #f38ba8, #cba6f7 55%, #313244);
+    }
+
+    .mock-poster:nth-child(3) {
+      background: linear-gradient(145deg, #89b4fa, #94e2d5 55%, #313244);
+    }
+
+    .mock-poster::after {
+      background: linear-gradient(90deg, var(--accent), var(--alt));
+      border-radius: 999px;
+      bottom: 0.45rem;
+      content: "";
+      height: 0.22rem;
+      left: 0.45rem;
+      position: absolute;
+      right: 30%;
+    }
+
+    .section { padding-block: 2.5rem 5rem; }
+
+    .section-heading {
+      align-items: end;
+      display: flex;
+      gap: 2rem;
+      justify-content: space-between;
+      margin-bottom: 1.6rem;
+    }
+
+    .section-heading h2 {
+      font-size: clamp(2rem, 4vw, 3.1rem);
+      letter-spacing: -0.045em;
+      margin: 0;
+    }
+
+    .section-heading p {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 0;
+      max-width: 35rem;
+    }
+
+    .theme-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .theme-card {
+      background: var(--card-bg) var(--card-pattern) repeat;
+      background-size: 120px 120px;
+      border: 2px solid var(--card-border);
+      border-radius: 0.9rem;
+      box-shadow: 0 10px 26px rgb(0 0 0 / 0.22);
+      color: var(--card-text);
+      display: flex;
+      flex-direction: column;
+      min-height: 20rem;
+      overflow: hidden;
+      padding: 1rem;
+      position: relative;
+    }
+
+    .theme-card::before {
+      border: 1px solid color-mix(in srgb, var(--card-text) 16%, transparent);
+      border-radius: 0.62rem;
+      content: "";
+      inset: 0.25rem;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    .theme-top {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .theme-name { font-size: 1.25rem; font-weight: 750; }
+
+    .swatches { display: flex; gap: 0.3rem; }
+
+    .swatch {
+      background: var(--swatch);
+      border: 1px solid color-mix(in srgb, var(--card-text) 18%, transparent);
+      border-radius: 50%;
+      height: 0.9rem;
+      width: 0.9rem;
+    }
+
+    .mini-library {
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: repeat(4, 1fr);
+      margin: 1.5rem 0;
+      position: relative;
+    }
+
+    .mini-poster {
+      aspect-ratio: 2 / 3;
+      background: linear-gradient(145deg, var(--card-accent), var(--card-alt));
+      border: 1px solid var(--card-border);
+      border-radius: 0.42rem;
+      box-shadow: 0 3px 10px rgb(0 0 0 / 0.22);
+    }
+
+    .mini-poster:nth-child(2) { filter: hue-rotate(28deg) brightness(0.88); }
+    .mini-poster:nth-child(3) { filter: hue-rotate(82deg) brightness(0.92); }
+    .mini-poster:nth-child(4) { filter: hue-rotate(142deg) brightness(0.86); }
+
+    .import-box {
+      align-items: center;
+      background: color-mix(in srgb, var(--card-bg) 88%, black);
+      border: 1px solid var(--card-border);
+      border-radius: 0.55rem;
+      display: flex;
+      gap: 0.6rem;
+      margin-top: auto;
+      min-width: 0;
+      padding: 0.55rem;
+      position: relative;
+    }
+
+    .import-box code {
+      color: var(--card-muted);
+      flex: 1;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.7rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .copy-button {
+      background: var(--card-accent);
+      border: 0;
+      border-radius: 0.42rem;
+      color: var(--card-on-accent);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 750;
+      min-height: 2rem;
+      padding: 0.35rem 0.65rem;
+    }
+
+    .steps {
+      counter-reset: steps;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(3, 1fr);
+      list-style: none;
+      padding: 0;
+    }
+
+    .steps li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.8rem;
+      color: var(--muted);
+      line-height: 1.55;
+      padding: 1.25rem;
+    }
+
+    .steps li::before {
+      align-items: center;
+      background: rgb(203 166 247 / 0.13);
+      border: 1px solid rgb(203 166 247 / 0.4);
+      border-radius: 0.42rem;
+      color: var(--accent);
+      content: counter(steps);
+      counter-increment: steps;
+      display: flex;
+      font-weight: 800;
+      height: 2rem;
+      justify-content: center;
+      margin-bottom: 0.85rem;
+      width: 2rem;
+    }
+
+    .steps strong { color: var(--text); display: block; margin-bottom: 0.25rem; }
+
+    .notice {
+      background: rgb(137 180 250 / 0.08);
+      border: 1px solid rgb(137 180 250 / 0.32);
+      border-radius: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-top: 1rem;
+      padding: 1rem 1.15rem;
+    }
+
+    .site-footer {
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      padding-block: 1.5rem 2rem;
+    }
+
+    .site-footer p { margin: 0; }
+
+    @media (max-width: 58rem) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-card { margin: 0 auto; max-width: 28rem; width: 100%; }
+      .theme-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .section-heading { align-items: start; flex-direction: column; gap: 0.75rem; }
+    }
+
+    @media (max-width: 38rem) {
+      body { overflow-x: hidden; }
+      .site-header { padding-inline: 1rem; }
+      .nav-link:first-child { display: none; }
+      .nav-link { font-size: 0.84rem; padding-inline: 0.65rem; }
+      .hero { display: block; min-height: auto; overflow: hidden; padding-block: 4rem; }
+      .hero h1 { font-size: clamp(2.7rem, 13vw, 3.45rem); }
+      .hero-card { margin-top: 2.5rem; max-width: 100%; transform: none; }
+      .theme-grid,
+      .steps { grid-template-columns: 1fr; }
+      .site-footer { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
+      .hero-card { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true"><span>◆</span></span>
+      Witzi for Jellyfin
+    </a>
+    <nav class="nav-links" aria-label="Primary navigation">
+      <a class="nav-link" href="#themes">Themes</a>
+      <a class="nav-link" href="https://github.com/chadouming/jellyfin-theme-witzi">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero shell">
+      <div>
+        <p class="eyebrow">Six palettes · One playful system</p>
+        <h1>Make Jellyfin<br>feel <span class="gradient-text">like Witzi.</span></h1>
+        <p class="lede">Patterned canvases, rounded playing-card surfaces, vivid accents, and careful interaction states—packaged as standalone CSS for Jellyfin Web.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#themes">Choose a theme</a>
+          <a class="button" href="https://github.com/chadouming/jellyfin-theme-witzi/releases/latest">Download CSS</a>
+        </div>
+      </div>
+      <div class="hero-card" aria-label="Illustration of the Witzi Jellyfin interface">
+        <div class="mock-header"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span></div>
+        <div class="mock-title">Continue Watching</div>
+        <div class="mock-row"><div class="mock-poster"></div><div class="mock-poster"></div><div class="mock-poster"></div></div>
+      </div>
+    </section>
+
+    <section class="section shell" id="themes">
+      <div class="section-heading">
+        <h2>Choose your table.</h2>
+        <p>Copy one import into Jellyfin. Every hosted build is standalone, including its SVG background pattern.</p>
+      </div>
+      <div class="theme-grid">
+        <article class="theme-card" style="--card-bg:#1e1e2e;--card-border:#585b70;--card-text:#cdd6f4;--card-muted:#a6adc8;--card-accent:#cba6f7;--card-alt:#89b4fa;--card-on-accent:#1e1e2e;--card-pattern:url('./assets/pattern-mocha.svg')">
+          <div class="theme-top"><span class="theme-name">Mocha</span><span class="swatches"><i class="swatch" style="--swatch:#cba6f7"></i><i class="swatch" style="--swatch:#89b4fa"></i><i class="swatch" style="--swatch:#a6e3a1"></i></span></div>
+          <div class="mini-library"><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i></div>
+          <div class="import-box"><code>@import …/witzi-mocha.css</code><button class="copy-button" data-theme="mocha">Copy</button></div>
+        </article>
+        <article class="theme-card" style="--card-bg:#eff1f5;--card-border:#bcc0cc;--card-text:#4c4f69;--card-muted:#62657a;--card-accent:#8839ef;--card-alt:#1e66f5;--card-on-accent:#fff;--card-pattern:url('./assets/pattern-latte.svg')">
+          <div class="theme-top"><span class="theme-name">Latte</span><span class="swatches"><i class="swatch" style="--swatch:#8839ef"></i><i class="swatch" style="--swatch:#1e66f5"></i><i class="swatch" style="--swatch:#40a02b"></i></span></div>
+          <div class="mini-library"><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i></div>
+          <div class="import-box"><code>@import …/witzi-latte.css</code><button class="copy-button" data-theme="latte">Copy</button></div>
+        </article>
+        <article class="theme-card" style="--card-bg:#2e3440;--card-border:#4c566a;--card-text:#eceff4;--card-muted:#d8dee9;--card-accent:#88c0d0;--card-alt:#52749b;--card-on-accent:#242933;--card-pattern:url('./assets/pattern-nord.svg')">
+          <div class="theme-top"><span class="theme-name">Nord</span><span class="swatches"><i class="swatch" style="--swatch:#88c0d0"></i><i class="swatch" style="--swatch:#5e81ac"></i><i class="swatch" style="--swatch:#a3be8c"></i></span></div>
+          <div class="mini-library"><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i></div>
+          <div class="import-box"><code>@import …/witzi-nord.css</code><button class="copy-button" data-theme="nord">Copy</button></div>
+        </article>
+        <article class="theme-card" style="--card-bg:#002b36;--card-border:#586e75;--card-text:#fdf6e3;--card-muted:#93a1a1;--card-accent:#268bd2;--card-alt:#2aa198;--card-on-accent:#001f27;--card-pattern:url('./assets/pattern-solarized.svg')">
+          <div class="theme-top"><span class="theme-name">Solarized</span><span class="swatches"><i class="swatch" style="--swatch:#268bd2"></i><i class="swatch" style="--swatch:#2aa198"></i><i class="swatch" style="--swatch:#b58900"></i></span></div>
+          <div class="mini-library"><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i></div>
+          <div class="import-box"><code>@import …/witzi-solarized.css</code><button class="copy-button" data-theme="solarized">Copy</button></div>
+        </article>
+        <article class="theme-card" style="--card-bg:#282a36;--card-border:#6272a4;--card-text:#f8f8f2;--card-muted:#bfbfbf;--card-accent:#bd93f9;--card-alt:#ff79c6;--card-on-accent:#282a36;--card-pattern:url('./assets/pattern-dracula.svg')">
+          <div class="theme-top"><span class="theme-name">Dracula</span><span class="swatches"><i class="swatch" style="--swatch:#bd93f9"></i><i class="swatch" style="--swatch:#ff79c6"></i><i class="swatch" style="--swatch:#50fa7b"></i></span></div>
+          <div class="mini-library"><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i></div>
+          <div class="import-box"><code>@import …/witzi-dracula.css</code><button class="copy-button" data-theme="dracula">Copy</button></div>
+        </article>
+        <article class="theme-card" style="--card-bg:#282828;--card-border:#504945;--card-text:#ebdbb2;--card-muted:#b3a28d;--card-accent:#fabd2f;--card-alt:#fe8019;--card-on-accent:#282828;--card-pattern:url('./assets/pattern-gruvbox.svg')">
+          <div class="theme-top"><span class="theme-name">Gruvbox</span><span class="swatches"><i class="swatch" style="--swatch:#fabd2f"></i><i class="swatch" style="--swatch:#fe8019"></i><i class="swatch" style="--swatch:#b8bb26"></i></span></div>
+          <div class="mini-library"><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i><i class="mini-poster"></i></div>
+          <div class="import-box"><code>@import …/witzi-gruvbox.css</code><button class="copy-button" data-theme="gruvbox">Copy</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section shell" id="install">
+      <div class="section-heading"><h2>Three small steps.</h2></div>
+      <ol class="steps">
+        <li><strong>Choose a palette</strong>Copy its import from the card above.</li>
+        <li><strong>Open Jellyfin</strong>Go to Dashboard → General → Custom CSS code.</li>
+        <li><strong>Paste and save</strong>Refresh Jellyfin Web to apply the theme.</li>
+      </ol>
+      <p class="notice">Use Jellyfin's built-in Dark theme for every variant except Latte, which works best over the built-in Light theme. Jellyfin 10.11 intentionally does not load server custom CSS inside the administration dashboard.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer shell">
+    <p>Witzi for Jellyfin · MIT licensed</p>
+    <p><a href="https://github.com/chadouming/jellyfin-theme-witzi/blob/main/README.md">Documentation</a> · <a href="https://github.com/chadouming/jellyfin-theme-witzi">Source</a></p>
+  </footer>
+
+  <script>
+    const baseUrl = 'https://chadouming.github.io/jellyfin-theme-witzi/dist';
+
+    document.querySelectorAll('.copy-button').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const theme = button.dataset.theme;
+        const importRule = `@import url("${baseUrl}/witzi-${theme}.css");`;
+        try {
+          await navigator.clipboard.writeText(importRule);
+          const previous = button.textContent;
+          button.textContent = 'Copied';
+          window.setTimeout(() => { button.textContent = previous; }, 1500);
+        } catch {
+          window.prompt('Copy this Jellyfin CSS import:', importRule);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

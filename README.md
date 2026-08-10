@@ -2,6 +2,8 @@
 
 A Jellyfin Web theme family built from Witzi's visual system: softly patterned canvases, rounded playing-card surfaces, inset card grooves, compact 8px controls, vivid two-color accents, and clear tactile interaction states.
 
+**[Preview the themes and copy an install link →](https://chadouming.github.io/jellyfin-theme-witzi/)**
+
 The default is Catppuccin Mocha. Six matching variants are included:
 
 | Variant | Character | File |
@@ -18,36 +20,36 @@ The default is Catppuccin Mocha. Six matching variants are included:
 Open **Dashboard → General → Custom CSS code**, paste one line, and save. Mocha is the default:
 
 ```css
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-mocha.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-mocha.css");
 ```
 
-Use one of these version-pinned imports:
+Use one of these GitHub Pages imports to follow the latest published version:
 
 ```css
 /* Catppuccin Mocha */
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-mocha.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-mocha.css");
 
 /* Catppuccin Latte */
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-latte.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-latte.css");
 
 /* Nord */
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-nord.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-nord.css");
 
 /* Solarized Dark */
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-solarized.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-solarized.css");
 
 /* Dracula */
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-dracula.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-dracula.css");
 
 /* Gruvbox Dark */
-@import url("https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-gruvbox.css");
+@import url("https://chadouming.github.io/jellyfin-theme-witzi/dist/witzi-gruvbox.css");
 ```
 
 Use Jellyfin's built-in **Dark** theme under your user display settings for every variant except Latte; use **Light** for Latte so any unstyled fallback controls match.
 
 For an installation without an external stylesheet request, download a compiled CSS file from the [v1.0.0 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.0.0) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
 
-To follow unreleased changes instead, replace `@v1.0.0` with `@main`. Version-pinned links are recommended because they only change when you deliberately select a newer release.
+For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 
