@@ -406,6 +406,7 @@ test('moves all live detail content into one ribbon panel', async () => {
   };
   const pageAttributes = new Map();
   const page = {
+    parentElement: { scrollTop: 500 },
     querySelector(selector) {
       if (selector === '.detailRibbon') return ribbon;
       if (selector === '.infoWrapper') return infos[0] || null;
@@ -611,7 +612,11 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop \.detailPagePrimaryContainer\s*\{[^}]*padding-top:\s*0\s*!important;/s
+    /\.layout-desktop \.detailPagePrimaryContainer\s*\{[^}]*display:\s*flow-root\s*!important;[^}]*padding-top:\s*0\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop #itemDetailPage \.detailPageWrapperContainer\s*\{[^}]*margin-top:\s*0\s*!important;/s
   );
   assert.doesNotMatch(
     css,

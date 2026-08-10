@@ -1295,7 +1295,12 @@ a[data-role="button"]:focus-visible {
 .layout-desktop .detailPagePrimaryContainer {
   --witzi-detail-ribbon-edge: clamp(0.75rem, 3.3vw, 3.5rem);
   --witzi-detail-ribbon-inner-padding: clamp(1rem, 3.3vw, 3.5rem);
+  display: flow-root !important;
   padding-top: 0 !important;
+}
+
+.layout-desktop #itemDetailPage .detailPageWrapperContainer {
+  margin-top: 0 !important;
 }
 
 /*

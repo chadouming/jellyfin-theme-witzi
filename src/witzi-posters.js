@@ -422,15 +422,10 @@
   }
 
   function detailPageHasScrolled(page) {
-    let element = page;
-
-    while (element) {
-      if (Number(element.scrollTop) > 1) return true;
-      element = element.parentElement;
-    }
-
-    return Number(window.scrollY) > 1
-      || Number(document.scrollingElement?.scrollTop) > 1;
+    // Jellyfin can preserve scroll offsets on the shared page ancestors while
+    // a newly shown detail page itself is still at its top. Those unrelated
+    // offsets must not suppress the initial poster/ribbon alignment.
+    return Number(page?.scrollTop) > 1;
   }
 
   function alignDetailRibbonPage(page, ribbon) {
@@ -547,7 +542,7 @@
     });
     const settleDetailView = () => {
       schedule();
-      [50, 250, 1000].forEach((delay) => window.setTimeout(schedule, delay));
+      [50, 250, 1000, 2000].forEach((delay) => window.setTimeout(schedule, delay));
     };
 
     window.addEventListener('viewshow', settleDetailView);
