@@ -759,6 +759,174 @@ html.transparentDocument #reactRoot {
   color: var(--witzi-accent);
 }
 
+/*
+ * Season episode lists keep their native landscape artwork, but use a denser
+ * Witzi row so the thumbnail, metadata, overview, and actions read as one card.
+ */
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.72);
+  background-image: linear-gradient(110deg, rgb(var(--witzi-accent-rgb) / 0.055), transparent 42%);
+  border: 1px solid rgb(var(--witzi-border-rgb) / 0.76) !important;
+  border-radius: var(--witzi-radius-md);
+  box-shadow: 0 3px 12px rgb(var(--witzi-bg-rgb) / 0.18);
+  box-sizing: border-box;
+  margin: 0 0 0.55rem;
+  overflow: hidden;
+  padding: 0.3rem !important;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  width: 100%;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"]:hover,
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"]:focus-within {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.9) !important;
+  border-color: rgb(var(--witzi-accent-rgb) / 0.52) !important;
+  box-shadow: 0 5px 18px rgb(var(--witzi-bg-rgb) / 0.24), 0 0 0 1px rgb(var(--witzi-accent-rgb) / 0.08);
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] > .listItem-content {
+  align-items: center;
+  gap: clamp(0.55rem, 1vw, 0.9rem);
+  width: 100%;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImage-large {
+  aspect-ratio: 16 / 9;
+  background-position: center;
+  background-size: cover;
+  border: 1px solid rgb(var(--witzi-border-rgb) / 0.8);
+  border-radius: calc(var(--witzi-radius-md) - 3px);
+  flex: 0 0 clamp(10rem, 17vw, 14rem);
+  height: auto !important;
+  margin: 0 !important;
+  overflow: hidden;
+  width: clamp(10rem, 17vw, 14rem) !important;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImage-large > img,
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImage-large .blurhash-canvas {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImageButton {
+  background: rgb(var(--witzi-bg-rgb) / 0.68);
+  border: 1px solid rgb(var(--witzi-accent-rgb) / 0.38);
+  height: 2.55rem;
+  opacity: 0.82;
+  padding: 0.45rem !important;
+  width: 2.55rem;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"]:hover .listItemImageButton,
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"]:focus-within .listItemImageButton {
+  background: rgb(var(--witzi-accent-rgb) / 0.2) !important;
+  color: var(--witzi-accent) !important;
+  opacity: 1;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemBody {
+  align-self: stretch;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.35rem 0;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemBody > .listItemBodyText:first-child {
+  color: var(--witzi-text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemMediaInfo {
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  gap: 0.2rem;
+  line-height: 1.15;
+  margin: 0;
+  padding-top: 0.18rem;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItem-overview {
+  display: -webkit-box;
+  font-size: 0.84rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
+  margin-top: 0.28rem;
+  white-space: normal;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItem-overview p {
+  display: inline;
+  margin: 0;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listViewUserDataButtons {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  padding-inline: 0.1rem;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemButton {
+  height: 2.45rem;
+  margin: 0 !important;
+  padding: 0.5rem !important;
+  width: 2.45rem;
+}
+
+#itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItem-bottomoverview {
+  border-top: 1px solid rgb(var(--witzi-border-rgb) / 0.52);
+  display: -webkit-box;
+  font-size: 0.8rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
+  margin: 0.25rem 0.35rem 0.12rem;
+  overflow: hidden;
+  padding-top: 0.35rem;
+}
+
+@media (max-width: 50em) {
+  #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] {
+    margin-bottom: 0.42rem;
+    padding: 0.24rem !important;
+  }
+
+  #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] > .listItem-content {
+    gap: 0.5rem;
+  }
+
+  #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImage-large {
+    flex-basis: clamp(7.25rem, 34vw, 10rem);
+    width: clamp(7.25rem, 34vw, 10rem) !important;
+  }
+
+  #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemBody {
+    padding: 0.18rem 0;
+  }
+
+  #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemBody > .listItemBodyText:first-child {
+    font-size: 0.92rem;
+  }
+
+  #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemButton {
+    height: 2.25rem;
+    padding: 0.42rem !important;
+    width: 2.25rem;
+  }
+}
+
+.layout-tv #itemDetailPage .detailVerticalSection .itemsContainer.vertical-list > .listItem[data-type="Episode"] .listItemImage-large {
+  flex-basis: clamp(14rem, 22vw, 20rem);
+  height: auto !important;
+  width: clamp(14rem, 22vw, 20rem) !important;
+}
+
 .alphaPickerButton,
 .guide-date-tab-button {
   border-radius: var(--witzi-radius-sm);
@@ -1062,10 +1230,59 @@ a[data-role="button"]:focus-visible {
 
 /* Details and player surfaces. */
 .detailRibbon {
-  background-color: rgb(var(--witzi-surface-rgb) / 0.86) !important;
-  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.12), transparent 52%) !important;
-  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
-  backdrop-filter: blur(16px);
+  background-color: rgb(var(--witzi-surface-rgb) / 0.88) !important;
+  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 54%) !important;
+  border: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-radius: 1.05rem;
+  box-shadow: 0 8px 26px rgb(0 0 0 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.035);
+  box-sizing: border-box;
+  backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.layout-desktop .detailPagePrimaryContainer {
+  --witzi-detail-ribbon-inset: clamp(0.75rem, 3.3vw, 3.5rem);
+}
+
+.layout-desktop .detailRibbon {
+  height: auto;
+  margin-inline: var(--witzi-detail-ribbon-inset);
+  margin-top: -8.6em;
+  min-height: 8.6em;
+  padding-block: 0.65rem;
+  padding-inline-end: clamp(1rem, 2.4vw, 2.25rem);
+}
+
+.layout-desktop [dir="ltr"] .detailRibbon {
+  padding-left: calc(32.45vw - var(--witzi-detail-ribbon-inset));
+}
+
+.layout-desktop [dir="rtl"] .detailRibbon {
+  padding-right: calc(32.45vw - var(--witzi-detail-ribbon-inset));
+}
+
+.detailRibbon .infoWrapper {
+  align-self: center;
+}
+
+.detailRibbon .mainDetailButtons {
+  flex-wrap: wrap;
+  gap: 0.12rem;
+  margin-block: 0.55rem 0.25rem;
+}
+
+.detailRibbon .detailButton {
+  border-radius: 0.7rem !important;
+}
+
+.detailRibbon .detailButton:hover,
+.detailRibbon .detailButton:focus-visible {
+  background: var(--witzi-accent-dim) !important;
+  color: var(--witzi-accent) !important;
+}
+
+.layout-mobile .detailRibbon {
+  margin: 0.55rem 4%;
+  padding: 0.85rem 4%;
 }
 
 .noBackdropTransparency .detailPageWrapperContainer {

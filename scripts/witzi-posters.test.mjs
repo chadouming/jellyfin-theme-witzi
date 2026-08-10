@@ -235,3 +235,26 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);
 });
+
+test('compacts landscape episode rows and floats the detail ribbon', async () => {
+  const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
+
+  assert.match(
+    css,
+    /#itemDetailPage \.detailVerticalSection \.itemsContainer\.vertical-list > \.listItem\[data-type="Episode"\]/
+  );
+  assert.match(
+    css,
+    /\.listItem\[data-type="Episode"\][\s\S]*\.listItemImage-large\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*flex:\s*0 0 clamp\(10rem, 17vw, 14rem\);/s
+  );
+  assert.match(css, /\.listItem\[data-type="Episode"\]:focus-within/);
+  assert.match(
+    css,
+    /\.detailRibbon\s*\{[^}]*border-radius:\s*1\.05rem;[^}]*backdrop-filter:\s*blur\(18px\) saturate\(1\.15\);/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop \.detailRibbon\s*\{[^}]*margin-top:\s*-8\.6em;[^}]*min-height:\s*8\.6em;/s
+  );
+  assert.match(css, /padding-left:\s*calc\(32\.45vw - var\(--witzi-detail-ribbon-inset\)\);/);
+});

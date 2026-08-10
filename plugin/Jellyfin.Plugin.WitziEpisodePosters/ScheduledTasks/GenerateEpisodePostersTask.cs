@@ -25,6 +25,17 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private const int PosterWidth = 1000;
     private const int PosterHeight = 1500;
     private static readonly double[] FramePositions = [0.18d, 0.50d, 0.82d];
+    private static readonly string[] BorderColorPalette =
+    [
+        "CBA6F7", // Mauve
+        "89B4FA", // Blue
+        "A6E3A1", // Green
+        "F38BA8", // Red
+        "FAB387", // Peach
+        "F9E2AF", // Yellow
+        "94E2D5", // Teal
+        "89DCEB"  // Sky
+    ];
 
     private readonly ILibraryManager _libraryManager;
     private readonly IMediaSourceManager _mediaSourceManager;
@@ -393,7 +404,8 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 startInfo.ArgumentList.Add(frame);
             }
 
-            const string Filter =
+            var borderColors = GetRandomBorderColors();
+            var filter =
                 "[1:v]scale=1000:1500:force_original_aspect_ratio=increase,crop=1000:1500,gblur=sigma=42,eq=brightness=-0.30:saturation=0.78[bg];" +
                 "[bg]drawbox=x=82:y=101:w=860:h=370:color=black@0.45:t=fill," +
                 "drawbox=x=82:y=581:w=860:h=370:color=black@0.45:t=fill," +
@@ -402,14 +414,19 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 "[1:v]scale=860:370:force_original_aspect_ratio=increase,crop=860:370[p1];" +
                 "[2:v]scale=860:370:force_original_aspect_ratio=increase,crop=860:370[p2];" +
                 "[base][p0]overlay=70:85[v0];" +
-                "[v0]drawbox=x=70:y=85:w=860:h=370:color=0xCBA6F7@0.96:t=7[v1];" +
+                $"[v0]drawbox=x=70:y=85:w=860:h=370:color=0x{borderColors[0]}@0.96:t=7[v1];" +
                 "[v1][p1]overlay=70:565[v2];" +
-                "[v2]drawbox=x=70:y=565:w=860:h=370:color=0x89B4FA@0.96:t=7[v3];" +
+                $"[v2]drawbox=x=70:y=565:w=860:h=370:color=0x{borderColors[1]}@0.96:t=7[v3];" +
                 "[v3][p2]overlay=70:1045[v4];" +
-                "[v4]drawbox=x=70:y=1045:w=860:h=370:color=0xA6E3A1@0.96:t=7,format=yuvj420p[out]";
+                $"[v4]drawbox=x=70:y=1045:w=860:h=370:color=0x{borderColors[2]}@0.96:t=7,format=yuvj420p[out]";
+
+            _logger.LogDebug(
+                "Using randomized Witzi border colors {BorderColors} for {PosterPath}",
+                string.Join(", ", borderColors),
+                outputPath);
 
             startInfo.ArgumentList.Add("-filter_complex");
-            startInfo.ArgumentList.Add(Filter);
+            startInfo.ArgumentList.Add(filter);
             startInfo.ArgumentList.Add("-map");
             startInfo.ArgumentList.Add("[out]");
             startInfo.ArgumentList.Add("-frames:v");
@@ -447,6 +464,18 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         startInfo.ArgumentList.Add("error");
         startInfo.ArgumentList.Add("-y");
         return startInfo;
+    }
+
+    private static string[] GetRandomBorderColors()
+    {
+        var colors = BorderColorPalette.ToArray();
+        for (var index = colors.Length - 1; index > 0; index--)
+        {
+            var swapIndex = Random.Shared.Next(index + 1);
+            (colors[index], colors[swapIndex]) = (colors[swapIndex], colors[index]);
+        }
+
+        return colors[..3];
     }
 
     private static async Task<FfmpegResult> RunFfmpeg(
