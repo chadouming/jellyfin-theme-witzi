@@ -2,8 +2,10 @@
 
 This Jellyfin 12 plugin creates a real 2:3 Primary image for episodes that only
 have Jellyfin's landscape Screen Grabber image. It uses Jellyfin's configured
-media encoder to sample frames at 18%, 50%, and 82%, then composes them locally
-into a Catppuccin Mocha/Witzi portrait poster.
+FFmpeg media encoder to sample frames at 18%, 50%, and 82%, then composes them
+locally into a Catppuccin Mocha/Witzi portrait poster. Frame extraction asks
+FFmpeg to select an available hardware decoder automatically and falls back to
+Jellyfin's regular software extraction if the GPU path cannot be used.
 
 The output is `<episode video basename>.jpg` beside the video. That filename is
 recognized as `ImageType.Primary` by Jellyfin 12's `EpisodeLocalImageProvider`,

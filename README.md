@@ -47,9 +47,9 @@ Use one of these GitHub Pages imports to follow the latest published version:
 
 Use Jellyfin's built-in **Dark** theme under your user display settings for every variant except Latte; use **Light** for Latte so any unstyled fallback controls match.
 
-For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.1 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.1) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
+For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.2 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.2) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
 
-For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.1/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
+For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.2/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 
@@ -79,12 +79,13 @@ https://chadouming.github.io/jellyfin-theme-witzi/manifest.json
 Install **Witzi Episode Posters**, restart Jellyfin, then run **Dashboard -> Scheduled Tasks -> Library -> Generate Witzi episode posters** once. The task:
 
 - uses Jellyfin's configured FFmpeg/media encoder at 18%, 50%, and 82% of each episode;
+- automatically uses a supported GPU decoder when available, with a software fallback;
 - builds a 1000 x 1500 Witzi-styled frame collage;
 - writes `<episode video basename>.jpg` beside the media, which Jellyfin 12 recognizes as the episode's Primary image;
 - registers the new image immediately and reports its 2:3 dimensions; and
 - never overwrites an existing image sidecar or an existing portrait Primary image.
 
-The Jellyfin service account therefore needs write access to the media folders. Poster generation has no automatic trigger; run the Library task manually whenever new episodes are added. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.1/Witzi.Episode.Posters_0.1.1.0.zip) is also available from the release.
+The Jellyfin service account therefore needs write access to the media folders. Poster generation has no automatic trigger; run the Library task manually whenever new episodes are added. GPU decoding depends on the FFmpeg build, exposed device, driver, and source codec; unsupported combinations fall back automatically. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.2/Witzi.Episode.Posters_0.1.2.0.zip) is also available from the release.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Entities;
@@ -266,12 +267,26 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         return _mediaSourceManager.GetMediaStreams(query).FirstOrDefault();
     }
 
-    private Task<string> ExtractFrame(
+    private async Task<string> ExtractFrame(
         Episode episode,
         MediaStream videoStream,
         double position,
         CancellationToken cancellationToken)
     {
+        var offset = episode.RunTimeTicks is > 0
+            ? TimeSpan.FromTicks((long)(episode.RunTimeTicks.Value * position))
+            : TimeSpan.FromSeconds(10 + (position * 60));
+
+        var hardwareFrame = await TryExtractFrameWithHardwareAcceleration(
+            episode,
+            videoStream,
+            offset,
+            cancellationToken).ConfigureAwait(false);
+        if (hardwareFrame is not null)
+        {
+            return hardwareFrame;
+        }
+
         var mediaSource = new MediaSourceInfo
         {
             VideoType = episode.VideoType,
@@ -279,18 +294,80 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             Protocol = episode.PathProtocol ?? MediaProtocol.File
         };
 
-        var offset = episode.RunTimeTicks is > 0
-            ? TimeSpan.FromTicks((long)(episode.RunTimeTicks.Value * position))
-            : TimeSpan.FromSeconds(10 + (position * 60));
-
-        return _mediaEncoder.ExtractVideoImage(
+        return await _mediaEncoder.ExtractVideoImage(
             episode.Path!,
             episode.Container ?? string.Empty,
             mediaSource,
             videoStream,
             episode.Video3DFormat,
             offset,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string?> TryExtractFrameWithHardwareAcceleration(
+        Episode episode,
+        MediaStream videoStream,
+        TimeSpan offset,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_mediaEncoder.EncoderPath))
+        {
+            return null;
+        }
+
+        var outputPath = Path.Combine(
+            Path.GetTempPath(),
+            "witzi-frame-" + Guid.NewGuid().ToString("N") + ".jpg");
+
+        try
+        {
+            var startInfo = CreateFfmpegStartInfo();
+            startInfo.ArgumentList.Add("-hwaccel");
+            startInfo.ArgumentList.Add("auto");
+            startInfo.ArgumentList.Add("-ss");
+            startInfo.ArgumentList.Add(offset.TotalSeconds.ToString("0.###", CultureInfo.InvariantCulture));
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(episode.Path!);
+            startInfo.ArgumentList.Add("-map");
+            startInfo.ArgumentList.Add($"0:{videoStream.Index}");
+            startInfo.ArgumentList.Add("-an");
+            startInfo.ArgumentList.Add("-sn");
+            startInfo.ArgumentList.Add("-dn");
+            startInfo.ArgumentList.Add("-frames:v");
+            startInfo.ArgumentList.Add("1");
+            startInfo.ArgumentList.Add("-q:v");
+            startInfo.ArgumentList.Add("2");
+            startInfo.ArgumentList.Add(outputPath);
+
+            var result = await RunFfmpeg(startInfo, cancellationToken).ConfigureAwait(false);
+            if (result.ExitCode == 0 && File.Exists(outputPath))
+            {
+                _logger.LogDebug(
+                    "Extracted a poster frame with FFmpeg hardware acceleration when available for {EpisodePath}",
+                    episode.Path);
+                return outputPath;
+            }
+
+            _logger.LogDebug(
+                "Hardware-accelerated frame extraction failed for {EpisodePath}; retrying with Jellyfin's software extraction. FFmpeg: {Error}",
+                episode.Path,
+                result.Error);
+        }
+        catch (OperationCanceledException)
+        {
+            TryDelete(outputPath);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                ex,
+                "Hardware-accelerated frame extraction could not start for {EpisodePath}; retrying with Jellyfin's software extraction",
+                episode.Path);
+        }
+
+        TryDelete(outputPath);
+        return null;
     }
 
     private async Task WritePoster(IReadOnlyList<string> framePaths, string outputPath, CancellationToken cancellationToken)
@@ -308,18 +385,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 .Select(index => framePaths[index % framePaths.Count])
                 .ToArray();
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = _mediaEncoder.EncoderPath,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardError = true
-            };
-
-            startInfo.ArgumentList.Add("-hide_banner");
-            startInfo.ArgumentList.Add("-loglevel");
-            startInfo.ArgumentList.Add("error");
-            startInfo.ArgumentList.Add("-y");
+            var startInfo = CreateFfmpegStartInfo();
 
             foreach (var frame in selectedFrames)
             {
@@ -352,31 +418,10 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             startInfo.ArgumentList.Add("2");
             startInfo.ArgumentList.Add(temporaryPath);
 
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
+            var result = await RunFfmpeg(startInfo, cancellationToken).ConfigureAwait(false);
+            if (result.ExitCode != 0 || !File.Exists(temporaryPath))
             {
-                throw new InvalidOperationException("Jellyfin's FFmpeg process could not be started.");
-            }
-
-            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            try
-            {
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(true);
-                }
-
-                throw;
-            }
-
-            var error = await errorTask.ConfigureAwait(false);
-            if (process.ExitCode != 0 || !File.Exists(temporaryPath))
-            {
-                throw new InvalidOperationException($"FFmpeg poster composition failed with exit code {process.ExitCode}: {error}");
+                throw new InvalidOperationException($"FFmpeg poster composition failed with exit code {result.ExitCode}: {result.Error}");
             }
 
             File.Move(temporaryPath, outputPath, false);
@@ -385,6 +430,51 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         {
             TryDelete(temporaryPath);
         }
+    }
+
+    private ProcessStartInfo CreateFfmpegStartInfo()
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = _mediaEncoder.EncoderPath,
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            RedirectStandardError = true
+        };
+
+        startInfo.ArgumentList.Add("-hide_banner");
+        startInfo.ArgumentList.Add("-loglevel");
+        startInfo.ArgumentList.Add("error");
+        startInfo.ArgumentList.Add("-y");
+        return startInfo;
+    }
+
+    private static async Task<FfmpegResult> RunFfmpeg(
+        ProcessStartInfo startInfo,
+        CancellationToken cancellationToken)
+    {
+        using var process = new Process { StartInfo = startInfo };
+        if (!process.Start())
+        {
+            throw new InvalidOperationException("Jellyfin's FFmpeg process could not be started.");
+        }
+
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(true);
+            }
+
+            throw;
+        }
+
+        return new FfmpegResult(process.ExitCode, await errorTask.ConfigureAwait(false));
     }
 
     private static async Task RegisterPoster(Episode episode, string posterPath, CancellationToken cancellationToken)
@@ -418,4 +508,6 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             // could not be removed immediately.
         }
     }
+
+    private readonly record struct FfmpegResult(int ExitCode, string Error);
 }
