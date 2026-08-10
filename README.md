@@ -49,9 +49,9 @@ Use one of these GitHub Pages imports to follow the latest published version:
 
 Use Jellyfin's built-in **Dark** theme under your user display settings for every variant except Latte; use **Light** for Latte so any unstyled fallback controls match.
 
-For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.3 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.3) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
+For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.4 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.4) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
 
-For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.3/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
+For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.4/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 

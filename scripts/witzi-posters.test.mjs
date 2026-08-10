@@ -236,7 +236,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);
 });
 
-test('compacts landscape episode rows and floats the detail ribbon', async () => {
+test('compacts episode rows and separates the ribbon from detail artwork', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
 
   assert.match(
@@ -256,5 +256,21 @@ test('compacts landscape episode rows and floats the detail ribbon', async () =>
     css,
     /\.layout-desktop \.detailRibbon\s*\{[^}]*margin-top:\s*-8\.6em;[^}]*min-height:\s*8\.6em;/s
   );
-  assert.match(css, /padding-left:\s*calc\(32\.45vw - var\(--witzi-detail-ribbon-inset\)\);/);
+  assert.match(
+    css,
+    /margin-left:\s*calc\(32\.45vw - var\(--witzi-detail-ribbon-inner-padding\)\);/
+  );
+  assert.match(css, /padding-left:\s*var\(--witzi-detail-ribbon-inner-padding\);/);
+  assert.match(
+    css,
+    /#itemDetailPage \.detailImageContainer \.card:hover \.cardBox\s*\{[^}]*filter:\s*none;[^}]*transform:\s*none;/s
+  );
+  assert.match(
+    css,
+    /--witzi-header-height:\s*2\.9rem;[\s\S]*--witzi-header-control:\s*2\.5rem;[\s\S]*--witzi-header-radius:\s*0\.72rem;/
+  );
+  assert.match(
+    css,
+    /\.MuiAppBar-root > \.MuiToolbar-root:first-child > \.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before\s*\{[^}]*border-radius:\s*var\(--witzi-header-radius\);/s
+  );
 });

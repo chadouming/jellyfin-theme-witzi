@@ -102,9 +102,10 @@
   --witzi-radius-md: 8px;
   --witzi-radius-lg: 12px;
   --witzi-radius-xl: 16px;
-  --witzi-header-height: 2.5rem;
-  --witzi-header-control: 2.25rem;
+  --witzi-header-height: 2.9rem;
+  --witzi-header-control: 2.5rem;
   --witzi-header-gap: 0.35rem;
+  --witzi-header-radius: 0.72rem;
   --witzi-shadow-sm: 0 3px 12px rgb(0 0 0 / 0.18);
   --witzi-shadow-md: 0 8px 26px rgb(0 0 0 / 0.24);
   --witzi-shadow-focus: 0 0 0 3px rgb(var(--witzi-accent-rgb) / 0.28);
@@ -270,10 +271,10 @@ html.transparentDocument #reactRoot {
 .skinHeader .headerLeft,
 .skinHeader .headerRight {
   align-items: center;
-  border-radius: 0.875rem;
+  border-radius: var(--witzi-header-radius);
   display: flex;
   min-height: var(--witzi-header-height);
-  padding: 0.1rem;
+  padding: 0.14rem;
 }
 
 .skinHeader .headerRight {
@@ -292,7 +293,7 @@ html.transparentDocument #reactRoot {
 }
 
 .skinHeader .headerTabs.sectionTabs:not(.hide) {
-  border-radius: 0.875rem;
+  border-radius: var(--witzi-header-radius);
   margin: var(--witzi-header-gap) auto 0;
   max-width: 100%;
   width: max-content;
@@ -315,29 +316,29 @@ html.transparentDocument #reactRoot {
 }
 
 .MuiAppBar-root > .MuiToolbar-root:not(:first-child) {
-  border-radius: 0.875rem;
+  border-radius: var(--witzi-header-radius);
   margin-top: var(--witzi-header-gap);
 }
 
 .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiStack-root {
   align-items: center;
-  border-radius: 0.875rem;
+  border-radius: var(--witzi-header-radius);
   box-sizing: border-box;
   height: var(--witzi-header-height);
   max-height: var(--witzi-header-height);
   min-height: var(--witzi-header-height);
-  padding: 0.1rem;
+  padding: 0.14rem;
 }
 
 .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiStack-root > .MuiButton-root {
-  border-radius: 0.7rem !important;
+  border-radius: 0.58rem !important;
   font-size: 0.82rem;
   min-height: 2.25rem;
   padding: 0.3rem 0.65rem;
 }
 
 .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiIconButton-root {
-  border-radius: 0.875rem !important;
+  border-radius: var(--witzi-header-radius) !important;
   height: var(--witzi-header-height);
   padding: 0.5rem !important;
   width: var(--witzi-header-height);
@@ -351,7 +352,7 @@ html.transparentDocument #reactRoot {
   height: var(--witzi-header-height);
   max-height: var(--witzi-header-height);
   min-height: var(--witzi-header-height);
-  padding: 0.1rem;
+  padding: 0.14rem;
 }
 
 .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:empty {
@@ -384,7 +385,7 @@ html.transparentDocument #reactRoot {
   background-color: rgb(var(--witzi-surface-rgb) / 0.88);
   background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 54%);
   border: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
-  border-radius: 0.875rem;
+  border-radius: var(--witzi-header-radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.14);
   box-sizing: border-box;
   backdrop-filter: blur(18px) saturate(1.15);
@@ -397,7 +398,7 @@ html.transparentDocument #reactRoot {
 
 .MuiAppBar-root > .MuiToolbar-root:first-child > .MuiBox-root:empty + .MuiBox-root:not(:empty) {
   border-left: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
-  border-radius: 0.875rem;
+  border-radius: var(--witzi-header-radius);
   margin-left: auto;
 }
 
@@ -554,6 +555,12 @@ html.transparentDocument #reactRoot {
 .card:focus .cardBox,
 .card:hover .cardBox {
   filter: brightness(1.05);
+}
+
+/* The main series/season artwork is a static anchor, not a lifting media card. */
+#itemDetailPage .detailImageContainer .card:hover .cardBox {
+  filter: none;
+  transform: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1240,24 +1247,31 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop .detailPagePrimaryContainer {
-  --witzi-detail-ribbon-inset: clamp(0.75rem, 3.3vw, 3.5rem);
+  --witzi-detail-ribbon-edge: clamp(0.75rem, 3.3vw, 3.5rem);
+  --witzi-detail-ribbon-inner-padding: clamp(1rem, 3.3vw, 3.5rem);
 }
 
 .layout-desktop .detailRibbon {
   height: auto;
-  margin-inline: var(--witzi-detail-ribbon-inset);
   margin-top: -8.6em;
   min-height: 8.6em;
   padding-block: 0.65rem;
-  padding-inline-end: clamp(1rem, 2.4vw, 2.25rem);
 }
 
+.layout-desktop[dir="ltr"] .detailRibbon,
 .layout-desktop [dir="ltr"] .detailRibbon {
-  padding-left: calc(32.45vw - var(--witzi-detail-ribbon-inset));
+  margin-left: calc(32.45vw - var(--witzi-detail-ribbon-inner-padding));
+  margin-right: var(--witzi-detail-ribbon-edge);
+  padding-left: var(--witzi-detail-ribbon-inner-padding);
+  padding-right: clamp(1rem, 2.4vw, 2.25rem);
 }
 
+.layout-desktop[dir="rtl"] .detailRibbon,
 .layout-desktop [dir="rtl"] .detailRibbon {
-  padding-right: calc(32.45vw - var(--witzi-detail-ribbon-inset));
+  margin-left: var(--witzi-detail-ribbon-edge);
+  margin-right: calc(32.45vw - var(--witzi-detail-ribbon-inner-padding));
+  padding-left: clamp(1rem, 2.4vw, 2.25rem);
+  padding-right: var(--witzi-detail-ribbon-inner-padding);
 }
 
 .detailRibbon .infoWrapper {
