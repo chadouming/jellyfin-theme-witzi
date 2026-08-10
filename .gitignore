@@ -1,2 +1,4 @@
 node_modules/
 *.log
+plugin/**/bin/
+plugin/**/obj/

@@ -1,0 +1,20 @@
+[
+  {
+    "guid": "896d9ba3-a129-4fcc-be38-c0521ebe2d8f",
+    "name": "Witzi Episode Posters",
+    "overview": "Persistent 2:3 episode posters generated from each video",
+    "description": "Extracts representative frames with Jellyfin's configured media encoder, arranges them into a Witzi-styled portrait poster, stores the JPEG beside the episode video, and registers it as the episode Primary image.",
+    "owner": "chadouming",
+    "category": "Metadata",
+    "versions": [
+      {
+        "version": "0.1.0.0",
+        "changelog": "Initial Jellyfin 12 ABI release.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.0/Witzi.Episode.Posters_0.1.0.0.zip",
+        "checksum": "b36f4eeb199d1a377df13f96dea7f96a",
+        "timestamp": "2026-08-10T13:53:14Z"
+      }
+    ]
+  }
+]

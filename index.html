@@ -453,6 +453,7 @@
     </a>
     <nav class="nav-links" aria-label="Primary navigation">
       <a class="nav-link" href="#themes">Themes</a>
+      <a class="nav-link" href="#episode-posters">Episode posters</a>
       <a class="nav-link" href="https://github.com/chadouming/jellyfin-theme-witzi">GitHub</a>
     </nav>
   </header>
@@ -522,6 +523,19 @@
         <li><strong>Paste and save</strong>Refresh Jellyfin Web to apply the theme.</li>
       </ol>
       <p class="notice">Use Jellyfin's built-in Dark theme for every variant except Latte, which works best over the built-in Light theme. Jellyfin 10.11 intentionally does not load server custom CSS inside the administration dashboard.</p>
+    </section>
+
+    <section class="section shell" id="episode-posters">
+      <div class="section-heading">
+        <h2>Real portrait episode art.</h2>
+        <p>The Jellyfin 12 plugin samples each episode and stores a Witzi-styled 2:3 Primary poster beside the video.</p>
+      </div>
+      <ol class="steps">
+        <li><strong>Add the catalog</strong>Use <code>https://chadouming.github.io/jellyfin-theme-witzi/manifest.json</code> under Dashboard â†’ Plugins â†’ Repositories.</li>
+        <li><strong>Install and restart</strong>Install Witzi Episode Posters from the catalog, then restart Jellyfin.</li>
+        <li><strong>Generate once</strong>Run Generate Witzi episode posters under Scheduled Tasks â†’ Library.</li>
+      </ol>
+      <p class="notice">Built for Jellyfin ABI 12.0.0.0 / .NET 10. Jellyfin needs write permission to each media folder. <a href="https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.0/Witzi.Episode.Posters_0.1.0.0.zip">Download the manual plugin ZIP</a>.</p>
     </section>
   </main>
 

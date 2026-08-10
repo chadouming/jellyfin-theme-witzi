@@ -47,21 +47,44 @@ Use one of these GitHub Pages imports to follow the latest published version:
 
 Use Jellyfin's built-in **Dark** theme under your user display settings for every variant except Latte; use **Light** for Latte so any unstyled fallback controls match.
 
-For an installation without an external stylesheet request, download a compiled CSS file from the [v1.0.0 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.0.0) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
+For an installation without an external stylesheet request, download a compiled CSS file from the [v1.1.0 release](https://github.com/chadouming/jellyfin-theme-witzi/releases/tag/v1.1.0) and paste its full contents into the Custom CSS field. The compiled files are standalone and contain their SVG pattern as an embedded data URI.
 
-For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.0.0/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
+For a version-pinned CDN import, use `https://cdn.jsdelivr.net/gh/chadouming/jellyfin-theme-witzi@v1.1.0/dist/witzi-mocha.css` and change the filename for another palette. Version-pinned links only change when you deliberately select a newer release.
 
 Clients can disable server-provided custom CSS in their display preferences. As of Jellyfin 10.11, server custom CSS is intentionally not loaded in the administration dashboard; the rest of Jellyfin Web remains themed. See Jellyfin's [upstream explanation](https://github.com/jellyfin/jellyfin-web/issues/7220#issuecomment-3428862571).
 
 ### Poster cards for Continue Watching and Next Up
 
-Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. The optional [`dist/witzi-posters.js`](dist/witzi-posters.js) helper uses Jellyfin's already-authenticated browser API client to select:
+Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. Witzi now has two cooperating pieces:
 
-- the series' main Primary poster for an episode, falling back to its season/parent poster;
+- the **Witzi Episode Posters** server plugin creates a persistent 2:3 Primary image from each episode's own video; and
+- the optional [`dist/witzi-posters.js`](dist/witzi-posters.js) browser helper makes Jellyfin Web request portrait Primary images for Continue Watching and Next Up.
+
+The browser helper selects:
+
+- an episode's own portrait Primary poster, then the series poster, then its season/parent poster;
 - the item's own portrait Primary poster for a movie; or
 - Jellyfin's native artwork, contained without cropping, only when every poster candidate fails to load.
 
-The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each series then season/parent Primary candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
+The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
+
+#### Jellyfin 12 episode-poster plugin
+
+Add this URL under **Dashboard -> Plugins -> Repositories**:
+
+```text
+https://chadouming.github.io/jellyfin-theme-witzi/manifest.json
+```
+
+Install **Witzi Episode Posters**, restart Jellyfin, then run **Dashboard -> Scheduled Tasks -> Library -> Generate Witzi episode posters** once. The task:
+
+- uses Jellyfin's configured FFmpeg/media encoder at 18%, 50%, and 82% of each episode;
+- builds a 1000 x 1500 Witzi-styled frame collage;
+- writes `<episode video basename>.jpg` beside the media, which Jellyfin 12 recognizes as the episode's Primary image;
+- registers the new image immediately and reports its 2:3 dimensions; and
+- never overwrites an existing image sidecar or an existing portrait Primary image.
+
+The Jellyfin service account therefore needs write access to the media folders. New episodes are picked up by an incremental task every day at 04:00. The compiled plugin targets **Jellyfin ABI 12.0.0.0**, **.NET 10**, and the current official **Jellyfin 12.0 RC4** packages; it will not load on Jellyfin 10.x. The [manual plugin ZIP](https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.0/Witzi.Episode.Posters_0.1.0.0.zip) is attached to the release as well.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 
@@ -74,6 +97,8 @@ To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plu
 ```
 
 Pasting the full file keeps the code local and pinned, so it must be replaced after helper updates. The hosted loader cache-busts on each page load and follows future updates automatically. The helper changes card artwork only in Jellyfin Web surfaces where JavaScript injection is active; native clients keep their own layout.
+
+If a literal such as `src=../Javascript/...` is visible in a media row, remove the malformed injector entry that contains it. The Custom CSS box must contain only the CSS `@import` line, and the JavaScript Injector entry must contain raw JavaScript like the block above—never an HTML `<script src="...">` tag or a bare `src=...` attribute. Neither valid Witzi file renders text into Recently Added.
 
 If an episode frame is still visible, run `document.documentElement.dataset.witziPosters` in the browser console. It returns `"active"` when the current helper is running; any other result means the JavaScript Injector entry is missing, disabled, or still contains an older pasted copy.
 
@@ -93,6 +118,7 @@ Source files stay intentionally dependency-free:
 
 ```text
 assets/          Witzi's palette-specific SVG tiles
+plugin/          Jellyfin 12 episode-poster plugin source and ABI manifest
 src/palettes/    Palette tokens
 src/             Shared styling and optional poster-helper source
 themes/          Small composable @import entry points

@@ -42,6 +42,7 @@ function createCard(id, type) {
 test('uses loadable posters and retains native artwork when candidates fail', async () => {
   const cards = [
     createCard('episode-inherited', 'Episode'),
+    createCard('episode-own-portrait', 'Episode'),
     createCard('episode-parent-fetch', 'Episode'),
     createCard('episode-type-hint', 'Episode'),
     createCard('movie', 'Movie'),
@@ -60,6 +61,14 @@ test('uses loadable posters and retains native artwork when candidates fail', as
       calls.push(options.Ids);
       const requested = new Set(options.Ids.split(','));
       const items = [
+        {
+          Id: 'episode-own-portrait',
+          Type: 'Episode',
+          SeriesId: 'series-own',
+          ImageTags: { Primary: 'witzi-generated-tag' },
+          PrimaryImageAspectRatio: 0.6667,
+          SeriesPrimaryImageTag: 'series-own-tag'
+        },
         {
           Id: 'episode-inherited',
           Type: 'Episode',
@@ -123,7 +132,7 @@ test('uses loadable posters and retains native artwork when candidates fail', as
     Image: class {
       set src(url) {
         imageRequests.push(url);
-        const isLoadable = /\/Items\/(series-1|season-2|series-3|movie)\/Images\/Primary/.test(url);
+        const isLoadable = /\/Items\/(series-1|episode-own-portrait|season-2|series-3|movie)\/Images\/Primary/.test(url);
         setTimeout(() => (isLoadable ? this.onload?.() : this.onerror?.()), 0);
       }
     },
@@ -162,18 +171,19 @@ test('uses loadable posters and retains native artwork when candidates fail', as
   assert.equal(imageRequests.some((url) => url.includes('/Items/series-without-poster/Images/Primary')), true);
   assert.equal(imageRequests.some((url) => url.includes('/Items/season-2/Images/Primary')), true);
 
-  for (const card of cards.slice(0, 4)) {
+  for (const card of cards.slice(0, 5)) {
     assert.equal(card.dataset.witziArtwork, 'poster');
     assert.equal(card.classList.contains('witzi-poster-card'), true);
     assert.match(card.image.getAttribute('data-src'), /\/Images\/Primary/);
   }
 
   assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
-  assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/season-2\/Images\/Primary/);
-  assert.match(cards[2].image.getAttribute('data-src'), /\/Items\/series-3\/Images\/Primary/);
-  assert.match(cards[3].image.getAttribute('data-src'), /\/Items\/movie\/Images\/Primary/);
+  assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/episode-own-portrait\/Images\/Primary/);
+  assert.match(cards[2].image.getAttribute('data-src'), /\/Items\/season-2\/Images\/Primary/);
+  assert.match(cards[3].image.getAttribute('data-src'), /\/Items\/series-3\/Images\/Primary/);
+  assert.match(cards[4].image.getAttribute('data-src'), /\/Items\/movie\/Images\/Primary/);
 
-  for (const fallback of cards.slice(4)) {
+  for (const fallback of cards.slice(5)) {
     assert.equal(fallback.dataset.witziArtwork, 'fallback');
     assert.equal(fallback.classList.contains('witzi-poster-card'), false);
     assert.equal(fallback.classList.contains('witzi-native-fallback'), true);
