@@ -1,0 +1,35 @@
+/* Gruvbox Dark — Witzi's warm retro palette. */
+:root {
+  --witzi-color-scheme: dark;
+  --witzi-bg: #282828;
+  --witzi-bg-rgb: 40 40 40;
+  --witzi-surface: #3c3836;
+  --witzi-surface-rgb: 60 56 54;
+  --witzi-surface-raised: #45403d;
+  --witzi-border: #504945;
+  --witzi-border-rgb: 80 73 69;
+  --witzi-text: #ebdbb2;
+  --witzi-muted: #b3a28d;
+  --witzi-accent: #fabd2f;
+  --witzi-accent-rgb: 250 189 47;
+  --witzi-accent-dark: #d69d16;
+  --witzi-accent-light: #fbd067;
+  --witzi-accent-dim: rgb(250 189 47 / 0.12);
+  --witzi-on-accent: #282828;
+  --witzi-accent-alt: #fe8019;
+  --witzi-accent-alt-rgb: 254 128 25;
+  --witzi-on-accent-alt: #282828;
+  --witzi-correct: #b8bb26;
+  --witzi-correct-rgb: 184 187 38;
+  --witzi-wrong: #fb4934;
+  --witzi-wrong-rgb: 251 73 52;
+  --witzi-wrong-dark: #cc2f1d;
+  --witzi-wrong-light: #fc7565;
+  --witzi-on-wrong: #1d2021;
+  --witzi-warning: #fabd2f;
+  --witzi-answer-a: #426b62;
+  --witzi-answer-b: #74485a;
+  --witzi-answer-c: #705711;
+  --witzi-answer-d: #586315;
+  --witzi-pattern: url("../../assets/pattern-gruvbox.svg");
+}

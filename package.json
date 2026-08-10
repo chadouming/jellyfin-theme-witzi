@@ -1,0 +1,13 @@
+{
+  "name": "jellyfin-theme-witzi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Witzi's playful card-table visual system adapted for Jellyfin Web.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "test": "npm run check"
+  },
+  "license": "MIT"
+}

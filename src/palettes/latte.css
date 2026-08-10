@@ -1,0 +1,35 @@
+/* Catppuccin Latte — Witzi's light palette. */
+:root {
+  --witzi-color-scheme: light;
+  --witzi-bg: #eff1f5;
+  --witzi-bg-rgb: 239 241 245;
+  --witzi-surface: #e6e9ef;
+  --witzi-surface-rgb: 230 233 239;
+  --witzi-surface-raised: #dce0e8;
+  --witzi-border: #bcc0cc;
+  --witzi-border-rgb: 188 192 204;
+  --witzi-text: #4c4f69;
+  --witzi-muted: #62657a;
+  --witzi-accent: #8839ef;
+  --witzi-accent-rgb: 136 57 239;
+  --witzi-accent-dark: #6f24d3;
+  --witzi-accent-light: #9f5cf2;
+  --witzi-accent-dim: rgb(136 57 239 / 0.1);
+  --witzi-on-accent: #fff;
+  --witzi-accent-alt: #1e66f5;
+  --witzi-accent-alt-rgb: 30 102 245;
+  --witzi-on-accent-alt: #fff;
+  --witzi-correct: #40a02b;
+  --witzi-correct-rgb: 64 160 43;
+  --witzi-wrong: #d20f39;
+  --witzi-wrong-rgb: 210 15 57;
+  --witzi-wrong-dark: #a9062b;
+  --witzi-wrong-light: #e64553;
+  --witzi-on-wrong: #fff;
+  --witzi-warning: #df8e1d;
+  --witzi-answer-a: #1e66f5;
+  --witzi-answer-b: #8839ef;
+  --witzi-answer-c: #b96f0a;
+  --witzi-answer-d: #117c82;
+  --witzi-pattern: url("../../assets/pattern-latte.svg");
+}

@@ -1,0 +1,35 @@
+/* Catppuccin Mocha — Witzi's default palette. */
+:root {
+  --witzi-color-scheme: dark;
+  --witzi-bg: #1e1e2e;
+  --witzi-bg-rgb: 30 30 46;
+  --witzi-surface: #313244;
+  --witzi-surface-rgb: 49 50 68;
+  --witzi-surface-raised: #45475a;
+  --witzi-border: #585b70;
+  --witzi-border-rgb: 88 91 112;
+  --witzi-text: #cdd6f4;
+  --witzi-muted: #a6adc8;
+  --witzi-accent: #cba6f7;
+  --witzi-accent-rgb: 203 166 247;
+  --witzi-accent-dark: #a984d7;
+  --witzi-accent-light: #e0c8fb;
+  --witzi-accent-dim: rgb(203 166 247 / 0.12);
+  --witzi-on-accent: #1e1e2e;
+  --witzi-accent-alt: #89b4fa;
+  --witzi-accent-alt-rgb: 137 180 250;
+  --witzi-on-accent-alt: #11111b;
+  --witzi-correct: #a6e3a1;
+  --witzi-correct-rgb: 166 227 161;
+  --witzi-wrong: #f38ba8;
+  --witzi-wrong-rgb: 243 139 168;
+  --witzi-wrong-dark: #d46f8e;
+  --witzi-wrong-light: #f7b2c5;
+  --witzi-on-wrong: #1e1e2e;
+  --witzi-warning: #f9e2af;
+  --witzi-answer-a: #1e3a5f;
+  --witzi-answer-b: #3b2a5e;
+  --witzi-answer-c: #4e3a10;
+  --witzi-answer-d: #1e4a2e;
+  --witzi-pattern: url("../../assets/pattern-mocha.svg");
+}

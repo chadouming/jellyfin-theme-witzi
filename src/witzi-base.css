@@ -1,0 +1,822 @@
+/*
+ * Witzi for Jellyfin — shared component layer
+ *
+ * Palette files provide the --witzi-* values. This file maps them onto
+ * Jellyfin Web's public palette variables, then styles legacy and current
+ * Jellyfin surfaces with Witzi's rounded playing-card visual language.
+ */
+
+:root {
+  color-scheme: var(--witzi-color-scheme, dark);
+
+  /* Current Jellyfin Web palette bridge. */
+  --jf-palette-common-white: #fff;
+  --jf-palette-background-default: var(--witzi-bg);
+  --jf-palette-background-defaultChannel: var(--witzi-bg-rgb);
+  --jf-palette-background-defaultImage: none;
+  --jf-palette-background-paper: var(--witzi-surface);
+  --jf-palette-background-paperChannel: var(--witzi-surface-rgb);
+  --jf-palette-primary-main: var(--witzi-accent);
+  --jf-palette-primary-mainChannel: var(--witzi-accent-rgb);
+  --jf-palette-primary-dark: var(--witzi-accent-dark);
+  --jf-palette-primary-light: var(--witzi-accent-light);
+  --jf-palette-primary-contrastText: var(--witzi-on-accent);
+  --jf-palette-secondary-main: var(--witzi-accent-alt);
+  --jf-palette-secondary-mainChannel: var(--witzi-accent-alt-rgb);
+  --jf-palette-secondary-contrastText: var(--witzi-on-accent-alt);
+  --jf-palette-error-main: var(--witzi-wrong);
+  --jf-palette-error-dark: var(--witzi-wrong-dark);
+  --jf-palette-error-light: var(--witzi-wrong-light);
+  --jf-palette-error-contrastText: var(--witzi-on-wrong);
+  --jf-palette-text-primary: var(--witzi-text);
+  --jf-palette-text-secondary: var(--witzi-muted);
+  --jf-palette-action-focus: rgb(var(--witzi-accent-rgb) / 0.2);
+  --jf-palette-action-hover: rgb(var(--witzi-accent-rgb) / 0.12);
+  --jf-palette-action-selected: rgb(var(--witzi-accent-rgb) / 0.18);
+  --jf-palette-action-selectedOpacity: 0.18;
+  --jf-palette-divider: var(--witzi-border);
+  --jf-palette-AppBar-defaultBg: rgb(var(--witzi-surface-rgb) / 0.94);
+  --jf-palette-AppBar-transparentBg: rgb(var(--witzi-bg-rgb) / 0.72);
+  --jf-palette-AppBar-gradient: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.08), transparent 55%);
+  --jf-palette-FilledInput-bg: rgb(var(--witzi-bg-rgb) / 0.78);
+  --jf-palette-FilledInput-borderColor: var(--witzi-border);
+  --jf-palette-Button-inheritContainedBg: var(--witzi-surface-raised);
+  --jf-palette-Button-inheritContainedHoverBg: var(--witzi-border);
+  --jf-palette-SnackbarContent-bg: var(--witzi-surface-raised);
+  --jf-palette-SnackbarContent-color: var(--witzi-text);
+  --jf-palette-Alert-infoFilledBg: var(--witzi-accent-alt);
+  --jf-palette-Alert-infoFilledColor: var(--witzi-on-accent-alt);
+  --jf-card-borderRadius: 12px;
+
+  /* Compatibility with Jellyfin Web's older theme tokens. */
+  --theme-primary: var(--witzi-accent);
+  --theme-accent: var(--witzi-accent-alt);
+  --theme-primary-color: var(--witzi-on-accent);
+  --theme-accent-color: var(--witzi-on-accent-alt);
+  --mdc-theme-primary: var(--witzi-accent);
+  --mdc-theme-secondary: var(--witzi-accent-alt);
+  --mdc-theme-error: var(--witzi-wrong);
+
+  /* Witzi geometry and elevation. */
+  --witzi-radius-sm: 6px;
+  --witzi-radius-md: 8px;
+  --witzi-radius-lg: 12px;
+  --witzi-radius-xl: 16px;
+  --witzi-shadow-sm: 0 3px 12px rgb(0 0 0 / 0.18);
+  --witzi-shadow-md: 0 8px 26px rgb(0 0 0 / 0.24);
+  --witzi-shadow-focus: 0 0 0 3px rgb(var(--witzi-accent-rgb) / 0.28);
+}
+
+html,
+body {
+  background-color: var(--witzi-bg) !important;
+  color: var(--witzi-text);
+  font-family: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  scrollbar-color: var(--witzi-border) var(--witzi-bg);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--witzi-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--witzi-border);
+  border: 2px solid var(--witzi-bg);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--witzi-accent);
+}
+
+::selection {
+  background: rgb(var(--witzi-accent-rgb) / 0.28);
+  color: var(--witzi-text);
+}
+
+a,
+.button-link {
+  color: var(--witzi-accent);
+}
+
+a:hover,
+.button-link:hover {
+  color: var(--witzi-accent-light);
+}
+
+/* Page canvas and Witzi's low-contrast theme tiles. */
+.backgroundContainer,
+.nowPlayingPlaylist,
+.wizardStartForm,
+.ui-corner-all,
+.ui-shadow {
+  background-color: var(--witzi-bg) !important;
+}
+
+.backgroundContainer:not(.withBackdrop),
+.wizardStartForm,
+.ui-corner-all,
+.ui-shadow {
+  background-image:
+    radial-gradient(circle at 12% -10%, rgb(var(--witzi-accent-rgb) / 0.1), transparent 30rem),
+    var(--witzi-pattern) !important;
+  background-position: top left, top left !important;
+  background-repeat: no-repeat, repeat !important;
+  background-size: 42rem 32rem, 120px 120px !important;
+}
+
+.backgroundContainer.withBackdrop {
+  background-color: rgb(var(--witzi-bg-rgb) / 0.82) !important;
+  background-image: linear-gradient(90deg, rgb(var(--witzi-bg-rgb) / 0.9), rgb(var(--witzi-bg-rgb) / 0.56) 62%, transparent) !important;
+  opacity: 1 !important;
+}
+
+/* Header and navigation. */
+.skinHeader,
+.skinHeader-withBackground,
+.skinHeader.semiTransparent {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.82) !important;
+  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.1), transparent 48%) !important;
+  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.7);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.14);
+  color: var(--witzi-text);
+  backdrop-filter: blur(18px) saturate(1.15) !important;
+}
+
+.layout-tv .skinHeader.semiTransparent,
+.layout-tv .detailRibbon {
+  background: none !important;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none !important;
+}
+
+.headerButton,
+.paper-icon-button-light,
+.emby-scrollbuttons {
+  color: var(--witzi-muted);
+}
+
+.headerButton:hover,
+.paper-icon-button-light:hover:not(:disabled),
+.paper-icon-button-light:active:not(:disabled) {
+  background: var(--witzi-accent-dim) !important;
+  color: var(--witzi-accent) !important;
+}
+
+.mainDrawer,
+.drawer-open {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.97) !important;
+  border-right: 1px solid var(--witzi-border);
+}
+
+.navMenuOption {
+  border-radius: var(--witzi-radius-md);
+  color: var(--witzi-muted);
+  margin: 0.2rem 0.55rem;
+  transition: background-color 150ms ease, color 150ms ease, transform 120ms ease;
+}
+
+.navMenuOption:hover {
+  background: var(--witzi-accent-dim) !important;
+  color: var(--witzi-text);
+  transform: translateX(2px);
+}
+
+.navMenuOption-selected {
+  background: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+  box-shadow: 0 4px 14px rgb(var(--witzi-accent-rgb) / 0.22);
+}
+
+.navMenuOption-selected .navMenuOptionIcon {
+  color: currentColor;
+}
+
+/* Titles carry Witzi's two-color logo treatment. */
+.sectionTitle,
+.pageTitle,
+.itemName.infoText.parentNameLast {
+  color: var(--witzi-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sectionTitleTextButton:hover,
+.sectionTitleButton:hover {
+  color: var(--witzi-accent);
+}
+
+.pageTitleWithDefaultLogo {
+  filter: drop-shadow(0 3px 12px rgb(var(--witzi-accent-rgb) / 0.18));
+}
+
+/* Media cards: rounded playing-card frame, inset groove, gentle lift. */
+.cardBox,
+.cardScalable,
+.cardImageContainer,
+.cardOverlayContainer,
+.cardPadder,
+.blurhash-canvas {
+  border-radius: var(--witzi-radius-lg) !important;
+}
+
+.cardBox {
+  transition: transform 150ms ease, filter 150ms ease;
+}
+
+.visualCardBox,
+.cardBox:not(.visualCardBox) .cardPadder,
+.cardContent {
+  background-color: var(--witzi-surface) !important;
+  border: 1px solid var(--witzi-border);
+  box-shadow:
+    var(--witzi-shadow-sm),
+    inset 0 0 0 3px rgb(var(--witzi-bg-rgb) / 0.18),
+    inset 0 0 0 4px rgb(var(--witzi-border-rgb) / 0.16);
+}
+
+.visualCardBox {
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgb(255 255 255 / 0.012) 2px, rgb(255 255 255 / 0.012) 4px) !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.visualCardBox::before {
+  color: var(--witzi-accent);
+  content: "◆";
+  font-size: 0.58rem;
+  left: 0.65rem;
+  opacity: 0.32;
+  pointer-events: none;
+  position: absolute;
+  top: 0.45rem;
+  z-index: 4;
+}
+
+.cardImageContainer,
+.itemDetailImage {
+  background-color: var(--witzi-surface-raised);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+.cardText {
+  color: var(--witzi-text);
+}
+
+.cardText-secondary,
+.cardFooter-vibrant .cardText-secondary,
+.secondaryText,
+.fieldDescription,
+.listItem .secondary,
+.nowPlayingBarSecondaryText,
+.programSecondaryTitle {
+  color: var(--witzi-muted) !important;
+}
+
+.card.show-focus .cardBox,
+.card:focus .cardBox,
+.card:hover .cardBox {
+  filter: brightness(1.05);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .cardBox {
+    transform: translateY(-3px);
+  }
+}
+
+.card.show-focus .cardBox,
+.card:focus .cardBox {
+  outline: 2px solid var(--witzi-accent);
+  outline-offset: 3px;
+}
+
+.defaultCardBackground1 { background-color: var(--witzi-answer-a) !important; }
+.defaultCardBackground2 { background-color: var(--witzi-answer-b) !important; }
+.defaultCardBackground3 { background-color: var(--witzi-answer-c) !important; }
+.defaultCardBackground4 { background-color: var(--witzi-answer-d) !important; }
+.defaultCardBackground5 { background-color: var(--witzi-accent-dark) !important; }
+
+/* Panels, dialogs, menus, and list surfaces. */
+.paperList,
+.visualCardBox,
+.dialog,
+.nowPlayingContextMenu,
+.formDialogHeader:not(.formDialogHeader-clear),
+.formDialogFooter:not(.formDialogFooter-clear),
+.actionSheet,
+.focuscontainer.dialog,
+.toast,
+.appfooter,
+.playlistSectionButton,
+.nowPlayingPlaylist,
+.MuiPaper-root,
+.MuiDialog-paper,
+.MuiMenu-paper {
+  background-color: var(--witzi-surface) !important;
+  color: var(--witzi-text) !important;
+}
+
+.paperList,
+.dialog,
+.nowPlayingContextMenu,
+.actionSheet,
+.focuscontainer.dialog,
+.MuiPaper-root,
+.MuiDialog-paper,
+.MuiMenu-paper {
+  border: 1px solid var(--witzi-border);
+  border-radius: var(--witzi-radius-lg) !important;
+  box-shadow: var(--witzi-shadow-md) !important;
+}
+
+.dialogHeader,
+.formDialogHeader:not(.formDialogHeader-clear) {
+  border-bottom: 1px solid var(--witzi-border);
+}
+
+.formDialogFooter:not(.formDialogFooter-clear) {
+  border-top: 1px solid var(--witzi-border);
+}
+
+.listItem {
+  border-radius: var(--witzi-radius-md);
+  transition: background-color 120ms ease, transform 120ms ease;
+}
+
+.listItem-border,
+.actionsheetDivider,
+.emby-collapsible-button {
+  border-color: var(--witzi-border) !important;
+}
+
+.listItem:hover,
+.listItem:focus,
+.actionSheetMenuItem:hover {
+  background-color: var(--witzi-accent-dim) !important;
+}
+
+.listItemIcon:not(.listItemIcon-transparent) {
+  background: var(--witzi-accent-dim);
+  color: var(--witzi-accent);
+}
+
+.alphaPickerButton,
+.guide-date-tab-button {
+  border-radius: var(--witzi-radius-sm);
+  color: var(--witzi-muted) !important;
+}
+
+.alphaPickerButton-selected,
+.alphaPickerButton-tv:focus,
+.guide-date-tab-button:focus,
+.guide-date-tab-button.show-focus:focus {
+  background: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+}
+
+.infoBanner {
+  background: var(--witzi-accent-dim) !important;
+  border: 1px solid rgb(var(--witzi-accent-rgb) / 0.42);
+  border-radius: var(--witzi-radius-md);
+  color: var(--witzi-text) !important;
+}
+
+.detailTableBodyRow-shaded:nth-child(even) {
+  background: rgb(var(--witzi-surface-rgb) / 0.66) !important;
+}
+
+.toast {
+  border: 1px solid var(--witzi-border);
+  border-radius: var(--witzi-radius-md) !important;
+  box-shadow: var(--witzi-shadow-md);
+}
+
+/* Buttons preserve Witzi's 8px geometry and tactile motion. */
+a[data-role="button"],
+.fab,
+.raised,
+.button-submit,
+.button-delete,
+.emby-button {
+  border-radius: var(--witzi-radius-md) !important;
+  font-family: inherit;
+  font-weight: 600;
+  transition: background-color 150ms ease, color 150ms ease, opacity 150ms ease, transform 100ms ease, box-shadow 150ms ease;
+}
+
+a[data-role="button"],
+.fab,
+.raised {
+  background: var(--witzi-surface-raised) !important;
+  color: var(--witzi-text) !important;
+}
+
+.button-submit,
+.raised.button-submit,
+.fab.button-submit {
+  background: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+  box-shadow: 0 4px 14px rgb(var(--witzi-accent-rgb) / 0.22);
+}
+
+.button-delete {
+  background: var(--witzi-wrong) !important;
+  color: var(--witzi-on-wrong) !important;
+}
+
+.button-submit:hover:not(:disabled),
+.raised:hover:not(:disabled),
+.fab:hover:not(:disabled),
+a[data-role="button"]:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.button-submit:active:not(:disabled),
+.raised:active:not(:disabled),
+.fab:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.button-flat:hover {
+  background: var(--witzi-accent-dim) !important;
+  color: var(--witzi-accent) !important;
+}
+
+.emby-button.detailFloatingButton,
+.layout-tv .emby-button.detailFloatingButton:focus {
+  background: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+  box-shadow: 0 4px 16px rgb(var(--witzi-accent-rgb) / 0.26);
+}
+
+.emby-button:disabled,
+.raised:disabled,
+.fab:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.paper-icon-button-light,
+.headerButton {
+  border-radius: 999px !important;
+}
+
+.emby-button.show-focus:focus,
+.paper-icon-button-light.show-focus:focus,
+.raised:focus-visible,
+.fab:focus-visible,
+.button-submit:focus-visible,
+a[data-role="button"]:focus-visible {
+  box-shadow: var(--witzi-shadow-focus) !important;
+  outline: 2px solid var(--witzi-accent) !important;
+  outline-offset: 2px;
+}
+
+/* Forms. */
+.inputLabel,
+.inputLabelUnfocused,
+.textareaLabelUnfocused,
+.selectLabelUnfocused,
+.paperListLabel,
+.checkboxListLabel {
+  color: var(--witzi-muted) !important;
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.checkboxLabel {
+  color: var(--witzi-text);
+}
+
+.inputLabelFocused,
+.selectLabelFocused,
+.textareaLabelFocused {
+  color: var(--witzi-accent) !important;
+}
+
+.emby-input,
+.emby-textarea,
+.emby-select-withcolor {
+  background-color: rgb(var(--witzi-bg-rgb) / 0.78) !important;
+  border: 1.5px solid var(--witzi-border) !important;
+  border-radius: var(--witzi-radius-md) !important;
+  color: var(--witzi-text) !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.emby-input:focus,
+.emby-textarea:focus,
+.emby-select-withcolor:focus {
+  border-color: var(--witzi-accent) !important;
+  box-shadow: var(--witzi-shadow-focus);
+  outline: none;
+}
+
+.emby-select-tv-withcolor:focus {
+  background: var(--witzi-accent) !important;
+  border-color: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+}
+
+.emby-input::placeholder,
+.emby-textarea::placeholder {
+  color: var(--witzi-muted);
+  opacity: 0.72;
+}
+
+.emby-select-withcolor > option {
+  background: var(--witzi-surface);
+  color: var(--witzi-text);
+}
+
+.checkboxOutline {
+  background: var(--witzi-bg) !important;
+  border: 1.5px solid var(--witzi-border) !important;
+  border-radius: 4px !important;
+}
+
+.emby-checkbox:checked + span + .checkboxOutline {
+  background: var(--witzi-accent) !important;
+  border-color: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+}
+
+.emby-checkbox:focus + span + .checkboxOutline,
+.mdl-radio.show-focus .mdl-radio__button:focus + .mdl-radio__circles {
+  box-shadow: var(--witzi-shadow-focus);
+  outline: 2px solid var(--witzi-accent);
+  outline-offset: 2px;
+}
+
+.mdl-switch__input:checked + .mdl-switch__label + .mdl-switch__trackContainer .mdl-switch__track {
+  background: rgb(var(--witzi-accent-rgb) / 0.42) !important;
+}
+
+.mdl-switch__input:checked + .mdl-switch__label + .mdl-switch__trackContainer .mdl-switch__thumb {
+  background: var(--witzi-accent) !important;
+}
+
+.mdl-slider::-webkit-slider-thumb {
+  background: var(--witzi-accent) !important;
+}
+
+.mdl-slider::-moz-range-thumb {
+  background: var(--witzi-accent) !important;
+}
+
+/* Tabs and selection states. */
+.emby-tabs {
+  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.6);
+}
+
+.emby-tab-button {
+  color: var(--witzi-muted) !important;
+  font-weight: 600;
+}
+
+.emby-tab-button-active {
+  color: var(--witzi-text) !important;
+  position: relative;
+}
+
+.emby-tab-button-active::after {
+  background: linear-gradient(90deg, var(--witzi-accent), var(--witzi-accent-alt));
+  border-radius: 999px;
+  bottom: 0;
+  content: "";
+  height: 3px;
+  left: 18%;
+  position: absolute;
+  right: 18%;
+}
+
+.emby-tab-button:hover,
+.emby-tab-button.show-focus:focus {
+  color: var(--witzi-accent) !important;
+}
+
+.itemSelectionPanel,
+.selectionCommandsPanel {
+  border-color: var(--witzi-accent) !important;
+}
+
+.selectionCommandsPanel {
+  background: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+}
+
+.countIndicator,
+.fullSyncIndicator,
+.mediaSourceIndicator,
+.playedIndicator {
+  background: var(--witzi-accent) !important;
+  color: var(--witzi-on-accent) !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.24);
+}
+
+/* Progress, ratings, and status. */
+.itemProgressBar {
+  background: rgb(var(--witzi-border-rgb) / 0.68) !important;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.itemProgressBarForeground,
+.playbackProgress > div,
+.transcodingProgress > div {
+  background: linear-gradient(90deg, var(--witzi-accent), var(--witzi-accent-alt)) !important;
+}
+
+.itemProgressBarForeground-recording {
+  background: var(--witzi-wrong) !important;
+}
+
+.progressring-spiner {
+  border-color: var(--witzi-accent) !important;
+}
+
+.starIcon,
+.ratingbutton-icon-withrating {
+  color: var(--witzi-warning) !important;
+}
+
+.playstatebutton-icon-played,
+.buttonActive,
+.upNextDialog-countdownText {
+  color: var(--witzi-accent) !important;
+}
+
+.downloadbutton-icon-on,
+.metadataSidebarIcon,
+.guide-programTextIcon {
+  color: var(--witzi-accent) !important;
+}
+
+.mediaInfoText {
+  background: var(--witzi-accent-dim) !important;
+  border: 1px solid rgb(var(--witzi-accent-rgb) / 0.42);
+  border-radius: var(--witzi-radius-sm);
+  color: var(--witzi-accent) !important;
+}
+
+/* Details and player surfaces. */
+.detailRibbon {
+  background-color: rgb(var(--witzi-surface-rgb) / 0.86) !important;
+  background-image: linear-gradient(135deg, rgb(var(--witzi-accent-rgb) / 0.12), transparent 52%) !important;
+  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  backdrop-filter: blur(16px);
+}
+
+.noBackdropTransparency .detailPageWrapperContainer {
+  background-color: var(--witzi-bg) !important;
+  background-image: var(--witzi-pattern) !important;
+  background-repeat: repeat !important;
+  background-size: 120px 120px !important;
+}
+
+.nowPlayingBar,
+.appfooter {
+  background: rgb(var(--witzi-surface-rgb) / 0.94) !important;
+  border-top: 1px solid var(--witzi-border);
+  color: var(--witzi-text);
+  backdrop-filter: blur(18px);
+}
+
+.videoOsdBottom,
+.videoOsdHeader {
+  color: var(--witzi-text);
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.72);
+}
+
+#pdfPlayer,
+#dialogToc,
+#bookPlayer .topButtons,
+#comicsPlayer .swiper-pagination {
+  background: var(--witzi-surface) !important;
+  color: var(--witzi-text) !important;
+}
+
+#dialogToc {
+  border-color: var(--witzi-border) !important;
+}
+
+#dialogToc .toc li a:link,
+#dialogToc .bookplayerButtonIcon,
+#pdfPlayer .actionButtonIcon {
+  color: var(--witzi-muted) !important;
+}
+
+#dialogToc .toc li a:hover,
+#dialogToc .bookplayerButtonIcon:hover {
+  color: var(--witzi-accent) !important;
+}
+
+/* Login and small centered forms echo Witzi's narrow bordered container. */
+#loginPage .readOnlyContent,
+#loginPage form,
+.wizardStartForm {
+  background: rgb(var(--witzi-bg-rgb) / 0.9);
+  border: 2px solid var(--witzi-accent);
+  border-radius: 1.5rem;
+  box-shadow: var(--witzi-shadow-md);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+#loginPage .padded-left.padded-right.padded-bottom-page {
+  max-width: 31rem;
+}
+
+.quickConnectCode {
+  color: var(--witzi-accent);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+/* Guide and live TV. */
+.channelPrograms,
+.guide-channelHeaderCell,
+.guide-headerTimeslots {
+  background: var(--witzi-surface) !important;
+  border-color: var(--witzi-border) !important;
+}
+
+.programCell {
+  background: rgb(var(--witzi-surface-rgb) / 0.74) !important;
+  border-color: var(--witzi-border) !important;
+}
+
+.programCell-active,
+.programCell:focus {
+  background: var(--witzi-accent-dim) !important;
+  border-color: var(--witzi-accent) !important;
+}
+
+.programCell-sports { background: rgb(var(--witzi-correct-rgb) / 0.13) !important; }
+.programCell-movie { background: rgb(var(--witzi-accent-alt-rgb) / 0.13) !important; }
+.programCell-kids { background: rgb(var(--witzi-accent-rgb) / 0.13) !important; }
+.programCell-news { background: rgb(var(--witzi-wrong-rgb) / 0.11) !important; }
+
+/* Responsive restraint: retain Jellyfin's layout while reducing surface bulk. */
+@media (max-width: 50em) {
+  :root {
+    --witzi-radius-lg: 10px;
+    --witzi-radius-xl: 12px;
+  }
+
+  .backgroundContainer:not(.withBackdrop) {
+    background-size: 32rem 24rem, 96px 96px !important;
+  }
+
+  .skinHeader,
+  .skinHeader-withBackground,
+  .skinHeader.semiTransparent {
+    backdrop-filter: blur(12px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .card:hover .cardBox,
+  .navMenuOption:hover,
+  .raised:hover,
+  .button-submit:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --jf-palette-divider: var(--witzi-text);
+  }
+
+  .visualCardBox,
+  .cardBox:not(.visualCardBox) .cardPadder,
+  .paperList,
+  .dialog,
+  .emby-input,
+  .emby-textarea,
+  .emby-select-withcolor {
+    border-color: var(--witzi-text) !important;
+  }
+}

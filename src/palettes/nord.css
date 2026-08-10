@@ -1,0 +1,35 @@
+/* Nord — Witzi's frost palette. */
+:root {
+  --witzi-color-scheme: dark;
+  --witzi-bg: #2e3440;
+  --witzi-bg-rgb: 46 52 64;
+  --witzi-surface: #3b4252;
+  --witzi-surface-rgb: 59 66 82;
+  --witzi-surface-raised: #434c5e;
+  --witzi-border: #4c566a;
+  --witzi-border-rgb: 76 86 106;
+  --witzi-text: #eceff4;
+  --witzi-muted: #d8dee9;
+  --witzi-accent: #88c0d0;
+  --witzi-accent-rgb: 136 192 208;
+  --witzi-accent-dark: #5e81ac;
+  --witzi-accent-light: #a8d5df;
+  --witzi-accent-dim: rgb(136 192 208 / 0.12);
+  --witzi-on-accent: #242933;
+  --witzi-accent-alt: #52749b;
+  --witzi-accent-alt-rgb: 82 116 155;
+  --witzi-on-accent-alt: #fff;
+  --witzi-correct: #a3be8c;
+  --witzi-correct-rgb: 163 190 140;
+  --witzi-wrong: #b6535d;
+  --witzi-wrong-rgb: 182 83 93;
+  --witzi-wrong-dark: #9d4650;
+  --witzi-wrong-light: #d08770;
+  --witzi-on-wrong: #fff;
+  --witzi-warning: #ebcb8b;
+  --witzi-answer-a: #5e81ac;
+  --witzi-answer-b: #8c6c87;
+  --witzi-answer-c: #765f2c;
+  --witzi-answer-d: #526b45;
+  --witzi-pattern: url("../../assets/pattern-nord.svg");
+}

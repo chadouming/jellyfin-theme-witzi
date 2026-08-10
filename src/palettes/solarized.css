@@ -1,0 +1,35 @@
+/* Solarized Dark — Witzi's sun-and-ink palette. */
+:root {
+  --witzi-color-scheme: dark;
+  --witzi-bg: #002b36;
+  --witzi-bg-rgb: 0 43 54;
+  --witzi-surface: #073642;
+  --witzi-surface-rgb: 7 54 66;
+  --witzi-surface-raised: #0a404d;
+  --witzi-border: #586e75;
+  --witzi-border-rgb: 88 110 117;
+  --witzi-text: #fdf6e3;
+  --witzi-muted: #93a1a1;
+  --witzi-accent: #268bd2;
+  --witzi-accent-rgb: 38 139 210;
+  --witzi-accent-dark: #176a9f;
+  --witzi-accent-light: #5aa7dd;
+  --witzi-accent-dim: rgb(38 139 210 / 0.12);
+  --witzi-on-accent: #001f27;
+  --witzi-accent-alt: #2aa198;
+  --witzi-accent-alt-rgb: 42 161 152;
+  --witzi-on-accent-alt: #001f27;
+  --witzi-correct: #859900;
+  --witzi-correct-rgb: 133 153 0;
+  --witzi-wrong: #dc322f;
+  --witzi-wrong-rgb: 220 50 47;
+  --witzi-wrong-dark: #ad201e;
+  --witzi-wrong-light: #e86b69;
+  --witzi-on-wrong: #fff;
+  --witzi-warning: #b58900;
+  --witzi-answer-a: #176a9f;
+  --witzi-answer-b: #565aa2;
+  --witzi-answer-c: #705a08;
+  --witzi-answer-d: #166e69;
+  --witzi-pattern: url("../../assets/pattern-solarized.svg");
+}

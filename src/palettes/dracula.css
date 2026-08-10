@@ -1,0 +1,35 @@
+/* Dracula — Witzi's gothic neon palette. */
+:root {
+  --witzi-color-scheme: dark;
+  --witzi-bg: #282a36;
+  --witzi-bg-rgb: 40 42 54;
+  --witzi-surface: #44475a;
+  --witzi-surface-rgb: 68 71 90;
+  --witzi-surface-raised: #4d5068;
+  --witzi-border: #6272a4;
+  --witzi-border-rgb: 98 114 164;
+  --witzi-text: #f8f8f2;
+  --witzi-muted: #bfbfbf;
+  --witzi-accent: #bd93f9;
+  --witzi-accent-rgb: 189 147 249;
+  --witzi-accent-dark: #9b70dc;
+  --witzi-accent-light: #d2b4fb;
+  --witzi-accent-dim: rgb(189 147 249 / 0.12);
+  --witzi-on-accent: #282a36;
+  --witzi-accent-alt: #ff79c6;
+  --witzi-accent-alt-rgb: 255 121 198;
+  --witzi-on-accent-alt: #282a36;
+  --witzi-correct: #50fa7b;
+  --witzi-correct-rgb: 80 250 123;
+  --witzi-wrong: #ff5555;
+  --witzi-wrong-rgb: 255 85 85;
+  --witzi-wrong-dark: #d63c3c;
+  --witzi-wrong-light: #ff8080;
+  --witzi-on-wrong: #282a36;
+  --witzi-warning: #f1fa8c;
+  --witzi-answer-a: #326977;
+  --witzi-answer-b: #6d5395;
+  --witzi-answer-c: #6f742f;
+  --witzi-answer-d: #26763a;
+  --witzi-pattern: url("../../assets/pattern-dracula.svg");
+}
