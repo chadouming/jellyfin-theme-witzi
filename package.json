@@ -1,6 +1,6 @@
 {
   "name": "jellyfin-theme-witzi",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "private": true,
   "description": "Witzi's playful card-table visual system adapted for Jellyfin Web.",
   "type": "module",

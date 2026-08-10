@@ -18,18 +18,18 @@
 (function witziPosterHelper() {
   'use strict';
 
-  const themeFlag = window.getComputedStyle?.(document.documentElement)
-    ?.getPropertyValue('--witzi-theme-active')
-    ?.trim();
-  if (typeof window.getComputedStyle === 'function' && themeFlag !== '1') return;
   if (window.__witziPosterHelperLoaded) return;
+  // Reserve initialization immediately. Jellyfin loads this inline helper
+  // before its deferred application bundles and user Custom CSS, so another
+  // injected copy must not win the race while we wait for the theme.
   window.__witziPosterHelperLoaded = true;
-  document.documentElement?.setAttribute?.('data-witzi-posters', 'active');
 
   const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
   const BACKDROP_SELECTOR = '.backdropContainer';
   const DETAIL_PAGE_SELECTOR = '#itemDetailPage';
   const DETAIL_RIBBON_CORRECTION = '--witzi-detail-ribbon-correction';
+  const THEME_WAIT_INITIAL_MS = 250;
+  const THEME_WAIT_MAX_MS = 5000;
   const itemCache = new Map();
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
@@ -49,6 +49,9 @@
   };
   let retryTimer;
   let scheduled = false;
+  let started = false;
+  let themeWaitAttempts = 0;
+  let themeWaitTimer;
   let videoPlaybackActive = false;
 
   function getApiClient() {
@@ -570,9 +573,43 @@
     settleDetailView();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once: true });
-  } else {
-    start();
+  function themeIsActive() {
+    if (typeof window.getComputedStyle !== 'function') return true;
+
+    try {
+      return window.getComputedStyle(document.documentElement)
+        ?.getPropertyValue('--witzi-theme-active')
+        ?.trim() === '1';
+    } catch {
+      return false;
+    }
   }
+
+  function startWhenThemeIsReady() {
+    if (started) return;
+
+    if (!themeIsActive()) {
+      document.documentElement?.setAttribute?.('data-witzi-posters', 'waiting');
+      const delay = Math.min(
+        THEME_WAIT_INITIAL_MS * (2 ** Math.min(themeWaitAttempts, 5)),
+        THEME_WAIT_MAX_MS
+      );
+      themeWaitAttempts += 1;
+      window.clearTimeout(themeWaitTimer);
+      themeWaitTimer = window.setTimeout(startWhenThemeIsReady, delay);
+      return;
+    }
+
+    started = true;
+    window.clearTimeout(themeWaitTimer);
+    document.documentElement?.setAttribute?.('data-witzi-posters', 'active');
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start, { once: true });
+    } else {
+      start();
+    }
+  }
+
+  startWhenThemeIsReady();
 }());

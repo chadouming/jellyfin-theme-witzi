@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "0.1.6.0",
+        "changelog": "Fixes Jellyfin 12 startup by waiting for user Custom CSS before activating the embedded helper and reserving initialization against older injected copies.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.7/Witzi.Episode.Posters_0.1.6.0.zip",
+        "checksum": "2d698d7c38b620380fa3368f66a72495",
+        "timestamp": "2026-08-10T23:13:05Z"
+      },
+      {
         "version": "0.1.5.0",
         "changelog": "Installs the embedded Witzi browser helper into Jellyfin Web at startup, keeps detail content inside the real ribbon, uses the full detail-page width, and improves horizontal row controls.",
         "targetAbi": "12.0.0.0",

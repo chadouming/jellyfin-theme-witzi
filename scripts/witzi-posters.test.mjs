@@ -80,6 +80,58 @@ function createBackdropImage(url) {
   return image;
 }
 
+test('waits for Jellyfin to load Custom CSS before starting the helper', async () => {
+  let helperStatus;
+  let observerCount = 0;
+  let themeActive = false;
+  const context = {
+    console,
+    document: {
+      readyState: 'complete',
+      documentElement: {
+        removeAttribute() {},
+        setAttribute(name, value) {
+          if (name === 'data-witzi-posters') helperStatus = value;
+        }
+      },
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      addEventListener() {}
+    },
+    MutationObserver: class {
+      observe() { observerCount += 1; }
+    },
+    setTimeout,
+    clearTimeout
+  };
+  context.window = {
+    addEventListener() {},
+    clearTimeout,
+    getComputedStyle() {
+      return {
+        getPropertyValue(name) {
+          return name === '--witzi-theme-active' && themeActive ? '1' : '';
+        }
+      };
+    },
+    requestAnimationFrame: (callback) => setTimeout(callback, 0),
+    setTimeout: unrefTimeout
+  };
+
+  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  vm.runInNewContext(source, context);
+
+  assert.equal(context.window.__witziPosterHelperLoaded, true);
+  assert.equal(helperStatus, 'waiting');
+  assert.equal(observerCount, 0);
+
+  themeActive = true;
+  await waitFor(() => helperStatus === 'active', 1000);
+
+  assert.equal(observerCount, 1);
+});
+
 test('uses loadable posters and retains native artwork when candidates fail', async () => {
   const cards = [
     createCard('episode-inherited', 'Episode'),
@@ -622,7 +674,8 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   const helper = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
 
   assert.match(css, /--witzi-theme-active:\s*1;/);
-  assert.match(helper, /themeFlag !== '1'/);
+  assert.match(helper, /function startWhenThemeIsReady\(\)/);
+  assert.match(helper, /data-witzi-posters', 'waiting'/);
 
   assert.match(
     css,
