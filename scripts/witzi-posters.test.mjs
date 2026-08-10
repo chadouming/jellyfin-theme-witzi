@@ -559,7 +559,11 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-rail-top:\s*calc\(var\(--witzi-header-height\) \+ clamp\(0\.2rem, 0\.45vh, 0\.35rem\)\);[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);[^}]*--witzi-detail-next-up-top:/s
+    /\.layout-desktop #itemDetailPage\s*\{[^}]*--witzi-detail-rail-width:\s*clamp\(12rem, min\(25\.5vw, 36vh\), 21rem\);[^}]*--witzi-detail-poster-height:\s*calc\(var\(--witzi-detail-rail-width\) \* 1\.5\);[^}]*--witzi-detail-top-padding:\s*clamp\(0\.45rem, 0\.8vh, 0\.7rem\);[^}]*--witzi-detail-rail-top:\s*calc\(var\(--witzi-header-height\) \+ var\(--witzi-detail-top-padding\)\);[^}]*--witzi-detail-poster-top:\s*var\(--witzi-detail-rail-top\);[^}]*--witzi-detail-next-up-top:/s
+  );
+  assert.match(
+    css,
+    /\.layout-desktop \.detailPagePrimaryContainer\s*\{[^}]*padding-top:\s*0\s*!important;/s
   );
   assert.doesNotMatch(
     css,
@@ -573,6 +577,10 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(
     css,
     /\.layout-desktop #itemDetailPage \.detailImageContainer\.hide-mobile \.card\s*\{[^}]*position:\s*fixed;[^}]*top:\s*var\(--witzi-detail-poster-top\)\s*!important;[^}]*width:\s*var\(--witzi-detail-rail-width\)\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.detailImageContainer\.hide-mobile \.cardBox,[\s\S]*\.detailImageContainer\.hide-mobile \.cardScalable\s*\{[^}]*margin-top:\s*0\s*!important;[^}]*padding-top:\s*0\s*!important;/s
   );
   assert.match(
     css,
