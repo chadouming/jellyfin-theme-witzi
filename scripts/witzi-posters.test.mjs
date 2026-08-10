@@ -11,17 +11,26 @@ class ClassList {
   contains(value) { return this.values.has(value); }
 }
 
-function createCard(id) {
-  const attributes = new Map();
+function unrefTimeout(callback, delay) {
+  const timer = setTimeout(callback, delay);
+  timer.unref?.();
+  return timer;
+}
+
+function createCard(id, type) {
+  const attributes = new Map([
+    ['data-src', `https://jellyfin.test/Items/${id}/Images/Backdrop`]
+  ]);
   const image = {
-    style: {},
+    style: { backgroundImage: `url("https://jellyfin.test/Items/${id}/Images/Backdrop")` },
     setAttribute(name, value) { attributes.set(name, value); },
     getAttribute(name) { return attributes.get(name); },
+    removeAttribute(name) { attributes.delete(name); },
     querySelector() { return null; }
   };
 
   return {
-    dataset: { id },
+    dataset: { id, type },
     classList: new ClassList(),
     image,
     querySelector(selector) {
@@ -30,10 +39,17 @@ function createCard(id) {
   };
 }
 
-test('uses posters when available and retains backdrop fallbacks', async () => {
-  const cards = ['episode-inherited', 'episode-parent-fetch', 'movie', 'episode-no-poster']
-    .map(createCard);
+test('uses real posters and never retains generated landscape frames', async () => {
+  const cards = [
+    createCard('episode-inherited', 'Episode'),
+    createCard('episode-parent-fetch', 'Episode'),
+    createCard('episode-type-hint', 'Episode'),
+    createCard('movie', 'Movie'),
+    createCard('movie-landscape-primary', 'Movie'),
+    createCard('episode-no-poster', 'Episode')
+  ];
   const calls = [];
+  let observerCallback;
 
   const api = {
     getCurrentUserId: () => 'user-1',
@@ -57,9 +73,23 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
           SeriesId: 'series-2'
         },
         {
+          Id: 'episode-type-hint',
+          Type: 'Video',
+          SeriesId: 'series-3',
+          ImageTags: { Primary: 'generated-frame-tag' },
+          PrimaryImageAspectRatio: 1.78
+        },
+        {
           Id: 'movie',
           Type: 'Movie',
-          ImageTags: { Primary: 'movie-tag' }
+          ImageTags: { Primary: 'movie-tag' },
+          PrimaryImageAspectRatio: 0.67
+        },
+        {
+          Id: 'movie-landscape-primary',
+          Type: 'Movie',
+          ImageTags: { Primary: 'movie-frame-tag' },
+          PrimaryImageAspectRatio: 1.78
         },
         {
           Id: 'episode-no-poster',
@@ -74,6 +104,12 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
           Id: 'season-2',
           Type: 'Season',
           ImageTags: { Primary: 'season-2-tag' }
+        },
+        {
+          Id: 'series-3',
+          Type: 'Series',
+          ImageTags: { Primary: 'series-3-tag' },
+          PrimaryImageAspectRatio: 0.67
         }
       ];
       return { Items: items.filter((item) => requested.has(item.Id)) };
@@ -89,6 +125,7 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
       addEventListener() {}
     },
     MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
       observe() {}
     },
     setTimeout,
@@ -99,7 +136,7 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
     addEventListener() {},
     clearTimeout,
     requestAnimationFrame: (callback) => setTimeout(callback, 0),
-    setTimeout
+    setTimeout: unrefTimeout
   };
 
   const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
@@ -108,9 +145,9 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
 
   assert.equal(calls.length, 2);
   assert.match(calls[0], /episode-inherited/);
-  assert.equal(calls[1], 'series-2,season-2');
+  assert.equal(calls[1], 'series-2,season-2,series-3');
 
-  for (const card of cards.slice(0, 3)) {
+  for (const card of cards.slice(0, 4)) {
     assert.equal(card.dataset.witziArtwork, 'poster');
     assert.equal(card.classList.contains('witzi-poster-card'), true);
     assert.match(card.image.getAttribute('data-src'), /\/Images\/Primary/);
@@ -118,11 +155,24 @@ test('uses posters when available and retains backdrop fallbacks', async () => {
 
   assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
   assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/series-2\/Images\/Primary/);
+  assert.match(cards[2].image.getAttribute('data-src'), /\/Items\/series-3\/Images\/Primary/);
+  assert.match(cards[3].image.getAttribute('data-src'), /\/Items\/movie\/Images\/Primary/);
 
-  const fallback = cards[3];
-  assert.equal(fallback.dataset.witziArtwork, 'backdrop');
-  assert.equal(fallback.classList.contains('witzi-poster-card'), false);
-  assert.equal(fallback.image.getAttribute('data-src'), undefined);
+  for (const fallback of cards.slice(4)) {
+    assert.equal(fallback.dataset.witziArtwork, 'missing');
+    assert.equal(fallback.classList.contains('witzi-poster-card'), false);
+    assert.equal(fallback.classList.contains('witzi-no-poster-card'), true);
+    assert.equal(fallback.image.getAttribute('data-src'), undefined);
+    assert.equal(fallback.image.style.backgroundImage, 'none');
+  }
+
+  cards[0].image.setAttribute('data-src', 'https://jellyfin.test/Items/episode-inherited/Images/Backdrop');
+  cards[0].image.style.backgroundImage = 'url("https://jellyfin.test/Items/episode-inherited/Images/Backdrop")';
+  observerCallback();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
+  assert.equal(calls.length, 2);
 });
 
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
@@ -130,7 +180,15 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
 
   assert.match(
     css,
-    /\.backgroundContainer\.withBackdrop\s*\{[^}]*background-color:\s*transparent\s*!important;/s
+    /\.backgroundContainer\.withBackdrop\s*\{[^}]*background:\s*transparent\s*!important;/s
+  );
+  assert.doesNotMatch(
+    css,
+    /\.backgroundContainer\.withBackdrop\s*\{[^}]*linear-gradient/s
+  );
+  assert.match(
+    css,
+    /html:has\(\.backgroundContainer\.withBackdrop\)[\s\S]*#reactRoot:has\(\.backgroundContainer\.withBackdrop\)[\s\S]*background-color:\s*transparent\s*!important;/
   );
   assert.match(
     css,
@@ -141,6 +199,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
     /\.cardPadder-backdrop,[\s\S]*padding-bottom:\s*150%\s*!important;/
   );
   assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
+  assert.match(css, /\.witzi-no-poster-card \.cardImageContainer/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)::before/);
   assert.doesNotMatch(css, /\.MuiBox-root:first-of-type/);

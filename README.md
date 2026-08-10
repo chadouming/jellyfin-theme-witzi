@@ -58,10 +58,10 @@ Clients can disable server-provided custom CSS in their display preferences. As 
 Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the server for a different image. The optional [`dist/witzi-posters.js`](dist/witzi-posters.js) helper uses Jellyfin's already-authenticated browser API client to select:
 
 - the series' main Primary poster for an episode, falling back to its season/parent poster;
-- the item's own Primary poster for a movie; or
-- the native landscape artwork, contained without cropping, when no poster exists or the lookup fails.
+- the item's own portrait Primary poster for a movie; or
+- a clean poster placeholder when no real poster exists or the lookup fails, never a generated video frame.
 
-The rows always use the same portrait geometry as Recently Added. When the helper is not installed or no poster exists, Jellyfin's native landscape artwork is contained inside that portrait frame instead of being cropped.
+The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, retries incomplete poster metadata, and rejects landscape Primary images so generated frames are not stretched into portrait cards.
 
 To enable it on Jellyfin 10.11, install the third-party [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector), create an enabled script entry, and paste the contents of `dist/witzi-posters.js`. To follow the GitHub Pages copy automatically, the script entry can instead load it:
 
@@ -77,7 +77,7 @@ Pasting the full file keeps the code local and pinned. Using the hosted loader f
 
 ### Backdrops
 
-Enable **Settings → Display → Backdrops** for each Jellyfin Web client where you want dynamic artwork. Witzi leaves Jellyfin's `.backdropImage` layer intact, adds a readable palette tint above it, and respects `backgroundContainer-transparent` when a wrapper client renders its own backdrop. Backdrop-less pages continue to use the Witzi pattern.
+Enable **Settings → Display → Backdrops** for each Jellyfin Web client where you want dynamic artwork. Witzi leaves Jellyfin's `.backdropImage` unobscured and makes the page canvas transparent while an internal or wrapper-provided backdrop is active. Backdrop-less pages continue to use the Witzi pattern.
 
 ## Compatibility
 

@@ -6,8 +6,8 @@
  * current Jellyfin ApiClient for each card's metadata and swaps in a real
  * poster. Episodes prefer the series' main Primary poster, then a season/parent
  * poster; their own widescreen Primary capture is never used. Movies use their
- * own Primary poster. When no inherited poster is available, the native image
- * remains as a contained fallback.
+ * own portrait Primary poster. Generated landscape frames are hidden when no
+ * real poster can be found.
  */
 (function witziPosterHelper() {
   'use strict';
@@ -17,7 +17,9 @@
 
   const CARD_SELECTOR = '.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .card[data-id]';
   const itemCache = new Map();
+  const retryAfter = new Map();
   const pendingCards = new WeakSet();
+  const MISSING_RETRY_MS = 30000;
   let retryTimer;
   let scheduled = false;
 
@@ -27,7 +29,9 @@
 
   function ownPoster(item) {
     const tag = item?.ImageTags?.Primary;
-    return tag && item.Id ? { id: item.Id, tag } : null;
+    const aspect = Number(item?.PrimaryImageAspectRatio);
+    const isLandscapeFrame = Number.isFinite(aspect) && aspect > 1;
+    return tag && item.Id && !isLandscapeFrame ? { id: item.Id, tag } : null;
   }
 
   function inheritedPoster(item) {
@@ -69,15 +73,25 @@
 
     const response = await api.getItems(userId, {
       Ids: ids.join(','),
-      Fields: 'PrimaryImageAspectRatio',
-      EnableImages: true
+      Fields: 'PrimaryImageAspectRatio,ParentId',
+      EnableImages: true,
+      EnableImageTypes: 'Primary',
+      ImageTypeLimit: 1
     });
 
     return response?.Items || [];
   }
 
-  async function resolvePosters(api, ids) {
-    const missingIds = ids.filter((id) => !itemCache.has(id));
+  function isEpisode(item, typeHint) {
+    return typeHint === 'Episode' || item?.Type === 'Episode' || Boolean(item?.SeriesId);
+  }
+
+  async function resolvePosters(api, typeHints) {
+    const ids = [...typeHints.keys()];
+    const now = Date.now();
+    const missingIds = ids.filter((id) => (
+      !itemCache.has(id) && now >= (retryAfter.get(id) || 0)
+    ));
 
     if (missingIds.length) {
       const items = await fetchItems(api, missingIds);
@@ -88,12 +102,16 @@
         const item = itemsById.get(id);
         let poster = null;
 
-        if (item?.Type === 'Episode') {
+        if (isEpisode(item, typeHints.get(id))) {
           poster = inheritedPoster(item);
           if (!poster) {
             unresolvedEpisodes.push({
               id,
-              parentIds: [...new Set([item.SeriesId, item.SeasonId].filter(Boolean))]
+              parentIds: [...new Set([
+                item?.SeriesId,
+                item?.ParentPrimaryImageItemId,
+                item?.SeasonId
+              ].filter(Boolean))]
             });
             continue;
           }
@@ -101,7 +119,12 @@
           poster = ownPoster(item);
         }
 
-        itemCache.set(id, poster ? posterUrl(api, poster) : null);
+        if (poster) {
+          itemCache.set(id, posterUrl(api, poster));
+          retryAfter.delete(id);
+        } else {
+          retryAfter.set(id, now + MISSING_RETRY_MS);
+        }
       }
 
       if (unresolvedEpisodes.length) {
@@ -113,7 +136,12 @@
           const poster = episode.parentIds
             .map((id) => ownPoster(parentsById.get(id)))
             .find(Boolean);
-          itemCache.set(episode.id, poster ? posterUrl(api, poster) : null);
+          if (poster) {
+            itemCache.set(episode.id, posterUrl(api, poster));
+            retryAfter.delete(episode.id);
+          } else {
+            retryAfter.set(episode.id, now + MISSING_RETRY_MS);
+          }
         }
       }
     }
@@ -132,28 +160,71 @@
     image.style.backgroundSize = 'cover';
 
     const nestedImage = image.querySelector('img');
-    if (nestedImage) nestedImage.src = url;
+    if (nestedImage) {
+      nestedImage.src = url;
+      nestedImage.removeAttribute?.('srcset');
+      nestedImage.removeAttribute?.('data-src');
+      nestedImage.removeAttribute?.('data-srcset');
+    }
 
     card.dataset.witziArtwork = 'poster';
+    card.dataset.witziPosterId = card.dataset.id;
     card.classList.add('witzi-poster-card');
+    card.classList.remove('witzi-poster-pending');
+    card.classList.remove('witzi-no-poster-card');
     return true;
   }
 
-  function markBackdrop(card) {
-    card.dataset.witziArtwork = 'backdrop';
-    card.classList.remove('witzi-poster-card');
+  function markPending(card) {
+    card.classList.add('witzi-poster-pending');
   }
 
-  function retryLater() {
+  function markMissing(card) {
+    const image = card.querySelector('.cardImageContainer');
+    if (image) {
+      image.removeAttribute?.('data-src');
+      image.style.backgroundImage = 'none';
+    }
+
+    card.dataset.witziArtwork = 'missing';
+    card.dataset.witziPosterId = card.dataset.id;
+    card.classList.remove('witzi-poster-card');
+    card.classList.remove('witzi-poster-pending');
+    card.classList.add('witzi-no-poster-card');
+  }
+
+  function retryLater(delay = 1500) {
     window.clearTimeout(retryTimer);
-    retryTimer = window.setTimeout(schedule, 1500);
+    retryTimer = window.setTimeout(schedule, delay);
+  }
+
+  function hasAppliedPoster(card, url) {
+    const image = card.querySelector('.cardImageContainer');
+    return card.dataset.witziArtwork === 'poster'
+      && card.dataset.witziPosterId === card.dataset.id
+      && image?.getAttribute('data-src') === url
+      && image.style.backgroundImage.includes(url);
+  }
+
+  function needsProcessing(card) {
+    const id = card.dataset.id;
+    if (!id || pendingCards.has(card)) return false;
+
+    const url = itemCache.get(id);
+    if (url) return !hasAppliedPoster(card, url);
+
+    return card.dataset.witziPosterId !== id
+      || card.dataset.witziArtwork !== 'missing'
+      || Date.now() >= (retryAfter.get(id) || 0);
   }
 
   async function processCards() {
     const cards = [...document.querySelectorAll(CARD_SELECTOR)]
-      .filter((card) => !card.dataset.witziArtwork && !pendingCards.has(card));
+      .filter(needsProcessing);
 
     if (!cards.length) return;
+
+    cards.forEach(markPending);
 
     const api = getApiClient();
     if (!api) {
@@ -162,17 +233,22 @@
     }
 
     cards.forEach((card) => pendingCards.add(card));
-    const ids = [...new Set(cards.map((card) => card.dataset.id).filter(Boolean))];
+    const typeHints = new Map(cards.map((card) => [card.dataset.id, card.dataset.type]));
 
     try {
-      const posters = await resolvePosters(api, ids);
+      const posters = await resolvePosters(api, typeHints);
 
       for (const card of cards) {
         const url = posters.get(card.dataset.id);
-        if (!url || !applyPoster(card, url)) markBackdrop(card);
+        if (!url || !applyPoster(card, url)) markMissing(card);
+      }
+
+      if (cards.some((card) => card.dataset.witziArtwork === 'missing')) {
+        retryLater(MISSING_RETRY_MS);
       }
     } catch (error) {
-      console.warn('[witzi-posters] Poster lookup failed; retaining backdrop cards.', error);
+      cards.forEach(markMissing);
+      console.warn('[witzi-posters] Poster lookup failed; hiding generated video frames.', error);
       retryLater();
     } finally {
       cards.forEach((card) => pendingCards.delete(card));
@@ -190,7 +266,12 @@
 
   function start() {
     const observer = new MutationObserver(schedule);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-id', 'data-src', 'style'],
+      childList: true,
+      subtree: true
+    });
     window.addEventListener('viewshow', schedule);
     window.addEventListener('pageshow', schedule);
     schedule();

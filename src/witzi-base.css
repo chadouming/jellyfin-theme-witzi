@@ -138,15 +138,25 @@ a:hover,
 }
 
 .backgroundContainer.withBackdrop {
-  background-color: transparent !important;
-  background-image: linear-gradient(90deg, rgb(var(--witzi-bg-rgb) / 0.74), rgb(var(--witzi-bg-rgb) / 0.26) 58%, transparent) !important;
+  background: transparent !important;
   opacity: 1 !important;
+}
+
+/* Keep both Jellyfin and wrapper-provided backdrops above the page canvas. */
+html:has(.backgroundContainer.withBackdrop),
+html:has(.backgroundContainer.withBackdrop) body,
+body:has(.backgroundContainer.withBackdrop),
+#reactRoot:has(.backgroundContainer.withBackdrop),
+html.transparentDocument,
+html.transparentDocument body,
+html.transparentDocument #reactRoot {
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 /* Respect clients that render their own backdrop behind Jellyfin Web. */
 .backgroundContainer.withBackdrop.backgroundContainer-transparent {
-  background-color: transparent !important;
-  background-image: none !important;
+  background: transparent !important;
 }
 
 /* Header and navigation. */
@@ -517,6 +527,17 @@ a:hover,
 }
 
 .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-card .blurhash-canvas {
+  opacity: 0 !important;
+}
+
+/* Never stretch a generated video frame into a portrait fallback. */
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-pending .cardImageContainer,
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-no-poster-card .cardImageContainer {
+  background-image: none !important;
+}
+
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-poster-pending .blurhash-canvas,
+.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .witzi-no-poster-card .blurhash-canvas {
   opacity: 0 !important;
 }
 
