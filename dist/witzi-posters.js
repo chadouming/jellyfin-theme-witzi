@@ -24,9 +24,27 @@
   // injected copy must not win the race while we wait for the theme.
   window.__witziPosterHelperLoaded = true;
 
-  const CARD_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .card[data-id]';
+  const CARD_SCOPE_SELECTOR = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]';
+  const CARD_SELECTOR = `${CARD_SCOPE_SELECTOR} .card[data-id]`;
+  const CARD_LAYOUT_SELECTOR = [
+    CARD_SELECTOR,
+    `${CARD_SELECTOR} .cardImageContainer`,
+    `${CARD_SELECTOR} .cardImageContainer img`
+  ].join(', ');
   const BACKDROP_SELECTOR = '.backdropContainer';
   const DETAIL_PAGE_SELECTOR = '#itemDetailPage';
+  const DETAIL_LAYOUT_PARENT_SELECTOR = [
+    DETAIL_PAGE_SELECTOR,
+    `${DETAIL_PAGE_SELECTOR} .detailRibbon`,
+    `${DETAIL_PAGE_SELECTOR} .detailPagePrimaryContent`
+  ].join(', ');
+  const DETAIL_LAYOUT_SELECTOR = [
+    DETAIL_LAYOUT_PARENT_SELECTOR,
+    `${DETAIL_PAGE_SELECTOR} .infoWrapper`,
+    `${DETAIL_PAGE_SELECTOR} .mainDetailButtons`,
+    `${DETAIL_PAGE_SELECTOR} .detailSectionContent`,
+    `${DETAIL_PAGE_SELECTOR} .itemDetailsGroup`
+  ].join(', ');
   const DETAIL_RIBBON_ALIGN_OFFSET = '--witzi-detail-ribbon-align-offset';
   const THEME_WAIT_INITIAL_MS = 250;
   const THEME_WAIT_MAX_MS = 5000;
@@ -43,14 +61,15 @@
     activeUrl: null,
     cache: null,
     cleanupTimer: null,
-    container: null,
     layers: [],
     pendingUrl: null,
     requestId: 0
   };
   let retryTimer;
+  let backdropScheduled = false;
+  let cardScheduled = false;
   let detailScheduled = false;
-  let mediaScheduled = false;
+  let playbackScheduled = false;
   let started = false;
   let themeWaitAttempts = 0;
   let themeWaitTimer;
@@ -206,35 +225,35 @@
     card.dataset.witziArtwork = 'poster';
     card.dataset.witziPosterId = card.dataset.id;
     card.classList.add('witzi-poster-card');
-    card.classList.remove('witzi-poster-pending');
-    card.classList.remove('witzi-no-poster-card');
-    card.classList.remove('witzi-native-fallback');
     return true;
-  }
-
-  function markPending(card) {
-    card.classList.add('witzi-poster-pending');
   }
 
   function markMissing(card) {
     card.dataset.witziArtwork = 'fallback';
     card.dataset.witziPosterId = card.dataset.id;
     card.classList.remove('witzi-poster-card');
-    card.classList.remove('witzi-poster-pending');
-    card.classList.add('witzi-native-fallback');
   }
 
   function retryLater(delay = 1500) {
     window.clearTimeout(retryTimer);
-    retryTimer = window.setTimeout(schedule, delay);
+    retryTimer = window.setTimeout(scheduleCards, delay);
   }
 
   function hasAppliedPoster(card, url) {
     const image = card.querySelector('.cardImageContainer');
+    const nestedImage = image?.querySelector?.('img');
+    const nestedImageMatches = !nestedImage || (
+      (nestedImage.getAttribute?.('src') || nestedImage.src) === url
+      && !nestedImage.getAttribute?.('srcset')
+      && !nestedImage.getAttribute?.('data-src')
+      && !nestedImage.getAttribute?.('data-srcset')
+    );
+
     return card.dataset.witziArtwork === 'poster'
       && card.dataset.witziPosterId === card.dataset.id
       && image?.getAttribute('data-src') === url
-      && image.style.backgroundImage.includes(url);
+      && image.style.backgroundImage.includes(url)
+      && nestedImageMatches;
   }
 
   function needsProcessing(card) {
@@ -254,8 +273,6 @@
       .filter(needsProcessing);
 
     if (!cards.length) return;
-
-    cards.forEach(markPending);
 
     const api = getApiClient();
     if (!api) {
@@ -297,8 +314,8 @@
   }
 
   function latestBackdrop(container) {
-    const images = [...(container?.querySelectorAll?.('.backdropImage') || [])];
-    return images.length ? images[images.length - 1] : null;
+    const images = container?.querySelectorAll?.('.backdropImage');
+    return images?.length ? images[images.length - 1] : null;
   }
 
   function createBackdropLayer() {
@@ -327,7 +344,6 @@
       parent.insertBefore(backdropState.cache, container);
     }
 
-    backdropState.container = container;
     return backdropState.cache;
   }
 
@@ -406,14 +422,12 @@
     if (requestId === backdropState.requestId) activateBackdrop(container, url, requestId);
   }
 
-  function detailContentCandidate(page, host, selector, sourceSelector = selector) {
-    const sourceCandidates = [...(page.querySelectorAll?.(sourceSelector) || [])];
-    const source = sourceCandidates.find((element) => !host.contains?.(element));
-    const candidates = [...(page.querySelectorAll?.(selector) || [])];
+  function detailContentCandidate(host, candidates, preferredCandidates = candidates) {
+    const source = preferredCandidates.find((element) => !host.contains?.(element));
     const outsideHost = candidates.find((element) => !host.contains?.(element));
     const insideHost = candidates.find((element) => host.contains?.(element));
 
-    return source || outsideHost || insideHost || page.querySelector?.(selector);
+    return source || outsideHost || insideHost || null;
   }
 
   function syncDetailRibbonChildren(ribbon, content, managedContent) {
@@ -432,14 +446,6 @@
 
     if (!alreadyCurrent) {
       content.forEach((element) => ribbon.insertBefore(element, null));
-    }
-
-    // Unwrap the container used by older helper builds so every live detail
-    // node is owned directly by Jellyfin's actual ribbon.
-    const legacyHost = ribbon.querySelector?.('.witzi-ribbon-content');
-    if (legacyHost && !legacyHost.children?.length) {
-      if (legacyHost.remove) legacyHost.remove();
-      else ribbon.removeChild?.(legacyHost);
     }
   }
 
@@ -469,33 +475,37 @@
     const ribbon = page?.querySelector?.('.detailRibbon');
     if (!page || !ribbon) return;
 
-    const info = detailContentCandidate(page, ribbon, '.infoWrapper');
-    const buttons = detailContentCandidate(page, ribbon, '.mainDetailButtons');
-    const overview = detailContentCandidate(
-      page,
-      ribbon,
-      '.overview.detail-clamp-text',
-      '.detailPagePrimaryContent .overview.detail-clamp-text'
-    ) || detailContentCandidate(page, ribbon, '.overview');
+    const infoCandidates = [...page.querySelectorAll('.infoWrapper')];
+    const buttonCandidates = [...page.querySelectorAll('.mainDetailButtons')];
+    const sectionCandidates = [...page.querySelectorAll('.detailSectionContent')];
+    const groupCandidates = [...page.querySelectorAll('.itemDetailsGroup')];
+    const clampedOverviews = [...page.querySelectorAll('.overview.detail-clamp-text')];
+    const primaryClampedOverviews = [
+      ...page.querySelectorAll('.detailPagePrimaryContent .overview.detail-clamp-text')
+    ];
+    const info = detailContentCandidate(ribbon, infoCandidates);
+    const buttons = detailContentCandidate(ribbon, buttonCandidates);
+    let overview = detailContentCandidate(ribbon, clampedOverviews, primaryClampedOverviews);
+    if (!overview) {
+      overview = detailContentCandidate(ribbon, [...page.querySelectorAll('.overview')]);
+    }
     const sectionContent = overview?.closest?.('.detailSectionContent')
       || detailContentCandidate(
-        page,
         ribbon,
-        '.detailSectionContent',
-        '.detailPagePrimaryContent .detailSectionContent'
+        sectionCandidates,
+        [...page.querySelectorAll('.detailPagePrimaryContent .detailSectionContent')]
       );
     const group = detailContentCandidate(
-      page,
       ribbon,
-      '.itemDetailsGroup',
-      '.detailPagePrimaryContent .itemDetailsGroup'
+      groupCandidates,
+      [...page.querySelectorAll('.detailPagePrimaryContent .itemDetailsGroup')]
     );
     const content = [info, buttons, sectionContent, group].filter(Boolean);
     const managedContent = [
-      ...(page.querySelectorAll?.('.infoWrapper') || []),
-      ...(page.querySelectorAll?.('.mainDetailButtons') || []),
-      ...(page.querySelectorAll?.('.detailSectionContent') || []),
-      ...(page.querySelectorAll?.('.itemDetailsGroup') || [])
+      ...infoCandidates,
+      ...buttonCandidates,
+      ...sectionCandidates,
+      ...groupCandidates
     ];
     syncDetailRibbonChildren(ribbon, content, managedContent);
 
@@ -517,10 +527,7 @@
   }
 
   function syncDetailRibbonContent() {
-    const pages = [...(document.querySelectorAll?.(DETAIL_PAGE_SELECTOR) || [])];
-    const fallback = document.querySelector?.(DETAIL_PAGE_SELECTOR);
-    if (!pages.length && fallback) pages.push(fallback);
-    pages.forEach(syncDetailRibbonPage);
+    document.querySelectorAll(DETAIL_PAGE_SELECTOR).forEach(syncDetailRibbonPage);
   }
 
   function syncVideoPlayback() {
@@ -544,15 +551,37 @@
     });
   }
 
-  function scheduleMedia() {
-    if (mediaScheduled) return;
-    mediaScheduled = true;
+  function scheduleCards() {
+    if (cardScheduled) return;
+    cardScheduled = true;
     window.requestAnimationFrame(() => {
-      mediaScheduled = false;
-      syncVideoPlayback();
+      cardScheduled = false;
       void processCards();
+    });
+  }
+
+  function scheduleBackdrop() {
+    if (backdropScheduled) return;
+    backdropScheduled = true;
+    window.requestAnimationFrame(() => {
+      backdropScheduled = false;
       void processBackdrop();
     });
+  }
+
+  function schedulePlayback() {
+    if (playbackScheduled) return;
+    playbackScheduled = true;
+    window.requestAnimationFrame(() => {
+      playbackScheduled = false;
+      syncVideoPlayback();
+    });
+  }
+
+  function scheduleMedia() {
+    scheduleCards();
+    scheduleBackdrop();
+    schedulePlayback();
   }
 
   function schedule() {
@@ -560,22 +589,109 @@
     scheduleMedia();
   }
 
-  function mutationChangesDetailLayout(mutation) {
+  function nodeMatchesOrContains(node, selector) {
+    return Boolean(node?.matches?.(selector) || node?.querySelector?.(selector));
+  }
+
+  function targetIsWithin(target, selector) {
+    return Boolean(target?.matches?.(selector) || target?.closest?.(selector));
+  }
+
+  function mutationNodesMatch(mutation, selector) {
+    for (const node of mutation.addedNodes || []) {
+      if (nodeMatchesOrContains(node, selector)) return true;
+    }
+
+    for (const node of mutation.removedNodes || []) {
+      if (nodeMatchesOrContains(node, selector)) return true;
+    }
+
+    return false;
+  }
+
+  function mutationChangesScope(mutation, selector) {
+    if (mutation?.type !== 'childList') return false;
+    if (targetIsWithin(mutation.target, selector)) return true;
+
+    return mutationNodesMatch(mutation, selector);
+  }
+
+  function mutationChangesCards(mutation) {
+    if (mutation?.type === 'childList') {
+      return mutation.target?.matches?.(CARD_SCOPE_SELECTOR)
+        || mutationNodesMatch(mutation, CARD_LAYOUT_SELECTOR);
+    }
+
+    if (mutation?.type !== 'attributes') return false;
+
+    const target = mutation.target;
+    if (!targetIsWithin(target, CARD_SCOPE_SELECTOR)) return false;
+    if (mutation.attributeName === 'data-id') return target?.matches?.('.card');
+
+    if (mutation.attributeName === 'class' || mutation.attributeName === 'data-src') {
+      return target?.matches?.('.cardImageContainer');
+    }
+
+    return (mutation.attributeName === 'src' || mutation.attributeName === 'srcset')
+      && target?.matches?.('.cardImageContainer img');
+  }
+
+  function mutationChangesBackdrop(mutation) {
+    if (mutationChangesScope(mutation, BACKDROP_SELECTOR)) return true;
+    if (mutation?.type !== 'attributes') return false;
+
+    const target = mutation.target;
+    if (mutation.attributeName === 'class') return target?.matches?.(BACKDROP_SELECTOR);
+
+    return (mutation.attributeName === 'data-src' || mutation.attributeName === 'data-url')
+      && target?.matches?.('.backdropImage');
+  }
+
+  function mutationChangesPlayback(mutation) {
     return mutation?.type === 'childList'
-      || (mutation?.type === 'attributes'
-        && ['class', 'data-id'].includes(mutation.attributeName));
+      && mutationNodesMatch(mutation, '.videoPlayerContainer');
+  }
+
+  function mutationChangesDetailLayout(mutation) {
+    if (mutation?.type === 'childList') {
+      if (mutation.target?.matches?.(DETAIL_LAYOUT_PARENT_SELECTOR)) return true;
+
+      return mutationNodesMatch(mutation, DETAIL_LAYOUT_SELECTOR);
+    }
+
+    return mutation?.type === 'attributes'
+      && (mutation.attributeName === 'class' || mutation.attributeName === 'data-id')
+      && mutation.target?.matches?.(DETAIL_LAYOUT_SELECTOR);
   }
 
   function start() {
     const observer = new MutationObserver((mutations = []) => {
-      scheduleMedia();
-      if (!mutations.length || mutations.some(mutationChangesDetailLayout)) {
-        scheduleDetail();
+      if (!mutations.length) {
+        schedule();
+        return;
       }
+
+      let backdropChanged = false;
+      let cardsChanged = false;
+      let detailChanged = false;
+      let playbackChanged = false;
+
+      for (const mutation of mutations) {
+        if (!cardsChanged) cardsChanged = mutationChangesCards(mutation);
+        if (!backdropChanged) backdropChanged = mutationChangesBackdrop(mutation);
+        if (!playbackChanged) playbackChanged = mutationChangesPlayback(mutation);
+        if (!detailChanged) detailChanged = mutationChangesDetailLayout(mutation);
+        if (cardsChanged && backdropChanged && playbackChanged && detailChanged) break;
+      }
+
+      if (cardsChanged) scheduleCards();
+      if (backdropChanged) scheduleBackdrop();
+      if (playbackChanged) schedulePlayback();
+      if (detailChanged) scheduleDetail();
     });
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class', 'data-id', 'data-src', 'data-url', 'style'],
+      attributeFilter: ['class', 'data-id', 'data-src', 'data-url', 'src', 'srcset'],
       childList: true,
       subtree: true
     });
@@ -586,7 +702,6 @@
 
     window.addEventListener('viewshow', settleDetailView);
     window.addEventListener('pageshow', settleDetailView);
-    window.addEventListener('resize', schedule);
     settleDetailView();
   }
 

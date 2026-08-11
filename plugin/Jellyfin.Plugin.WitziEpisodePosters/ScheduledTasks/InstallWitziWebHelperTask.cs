@@ -13,6 +13,9 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
     private const string ResourceName = "Jellyfin.Plugin.WitziEpisodePosters.Web.witzi-posters.js";
     private const string StartMarker = "<!-- BEGIN Witzi Theme Browser Helper -->";
     private const string EndMarker = "<!-- END Witzi Theme Browser Helper -->";
+    private static readonly Regex HelperBlockPattern = new(
+        $"{Regex.Escape(StartMarker)}[\\s\\S]*?{Regex.Escape(EndMarker)}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private readonly IApplicationPaths _applicationPaths;
     private readonly ILogger<InstallWitziWebHelperTask> _logger;
 
@@ -68,7 +71,7 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
             }
 
             using var reader = new StreamReader(resource);
-            var helper = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            var helper = (await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false)).TrimEnd();
             if (helper.Contains("</script", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogError("Cannot install the Witzi browser helper because its source contains a closing script tag.");
@@ -76,21 +79,45 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
             }
 
             var current = await File.ReadAllTextAsync(indexPath, cancellationToken).ConfigureAwait(false);
-            var markerPattern = $"{Regex.Escape(StartMarker)}[\\s\\S]*?{Regex.Escape(EndMarker)}\\s*";
-            var withoutPreviousHelper = Regex.Replace(current, markerPattern, string.Empty, RegexOptions.CultureInvariant);
-            var closingBody = withoutPreviousHelper.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
-            if (closingBody < 0)
-            {
-                _logger.LogWarning("Cannot install the Witzi browser helper because {Path} has no closing body tag.", indexPath);
-                return;
-            }
-
-            var injection = $"{StartMarker}{Environment.NewLine}<script>{Environment.NewLine}{helper}{Environment.NewLine}</script>{Environment.NewLine}{EndMarker}{Environment.NewLine}";
-            var updated = withoutPreviousHelper.Insert(closingBody, injection);
-            if (string.Equals(current, updated, StringComparison.Ordinal))
+            var injection = $"{StartMarker}{Environment.NewLine}<script>{Environment.NewLine}{helper}{Environment.NewLine}</script>{Environment.NewLine}{EndMarker}";
+            var existingBlocks = HelperBlockPattern.Matches(current);
+            if (existingBlocks.Count == 1
+                && string.Equals(existingBlocks[0].Value, injection, StringComparison.Ordinal))
             {
                 _logger.LogDebug("The current Witzi browser helper is already installed in Jellyfin Web.");
                 return;
+            }
+
+            string updated;
+            if (existingBlocks.Count > 0)
+            {
+                // Replace the first block where it already lives and remove
+                // accidental duplicates. Re-appending it before </body> can
+                // reorder or overwrite injections owned by other plugins.
+                var replacementWritten = false;
+                updated = HelperBlockPattern.Replace(
+                    current,
+                    _ =>
+                    {
+                        if (replacementWritten)
+                        {
+                            return string.Empty;
+                        }
+
+                        replacementWritten = true;
+                        return injection;
+                    });
+            }
+            else
+            {
+                var closingBody = current.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
+                if (closingBody < 0)
+                {
+                    _logger.LogWarning("Cannot install the Witzi browser helper because {Path} has no closing body tag.", indexPath);
+                    return;
+                }
+
+                updated = current.Insert(closingBody, injection + Environment.NewLine);
             }
 
             await File.WriteAllTextAsync(indexPath, updated, cancellationToken).ConfigureAwait(false);

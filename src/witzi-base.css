@@ -62,7 +62,6 @@
   --witzi-radius-sm: 6px;
   --witzi-radius-md: 8px;
   --witzi-radius-lg: 12px;
-  --witzi-radius-xl: 16px;
   --witzi-header-height: 2.9rem;
   --witzi-header-control: 2.5rem;
   --witzi-header-gap: 0.35rem;
@@ -120,15 +119,12 @@ a:hover,
 
 /* Page canvas and Witzi's low-contrast theme tiles. */
 .backgroundContainer,
-.nowPlayingPlaylist,
-.wizardStartForm,
 .ui-corner-all,
 .ui-shadow {
   background-color: var(--witzi-bg) !important;
 }
 
 .backgroundContainer:not(.withBackdrop),
-.wizardStartForm,
 .ui-corner-all,
 .ui-shadow {
   background-image:
@@ -146,12 +142,9 @@ a:hover,
 
 /* Keep both Jellyfin and wrapper-provided backdrops above the page canvas. */
 html:has(.backgroundContainer.withBackdrop),
-html:has(.backgroundContainer.withBackdrop) body,
-body:has(.backgroundContainer.withBackdrop),
-#reactRoot:has(.backgroundContainer.withBackdrop),
+html:has(.backgroundContainer.withBackdrop) :is(body, #reactRoot),
 html.transparentDocument,
-html.transparentDocument body,
-html.transparentDocument #reactRoot {
+html.transparentDocument :is(body, #reactRoot) {
   background-color: transparent !important;
   background-image: none !important;
 }
@@ -168,20 +161,14 @@ html:has(.videoPlayerContainer) {
   background-image: none !important;
 }
 
-html[data-witzi-video-active="true"] body,
-html[data-witzi-video-active="true"] #reactRoot,
-html:has(.videoPlayerContainer) body,
-html:has(.videoPlayerContainer) #reactRoot {
+html[data-witzi-video-active="true"] :is(body, #reactRoot),
+html:has(.videoPlayerContainer) :is(body, #reactRoot) {
   background-color: transparent !important;
   background-image: none !important;
 }
 
-html[data-witzi-video-active="true"] .backgroundContainer,
-html[data-witzi-video-active="true"] .backdropContainer,
-html[data-witzi-video-active="true"] .witzi-backdrop-cache,
-html:has(.videoPlayerContainer) .backgroundContainer,
-html:has(.videoPlayerContainer) .backdropContainer,
-html:has(.videoPlayerContainer) .witzi-backdrop-cache {
+html[data-witzi-video-active="true"] :is(.backgroundContainer, .backdropContainer, .witzi-backdrop-cache),
+html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .witzi-backdrop-cache) {
   opacity: 0 !important;
   visibility: hidden !important;
 }
@@ -459,8 +446,7 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
 }
 
 .headerButton,
-.paper-icon-button-light,
-.emby-scrollbuttons {
+.paper-icon-button-light {
   color: var(--witzi-muted);
 }
 
@@ -689,17 +675,17 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
  * Jellyfin assigns both playback and mark-played monitor hints to these
  * sections, which avoids fragile title selectors.
  */
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+.homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
   width: 33.3333333333% !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+.homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
   width: 40vw !important;
 }
 
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .cardPadder-backdrop,
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .cardPadder-overflowBackdrop,
-.homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] .overflowBackdropCard-textCardPadder {
+.homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .cardPadder-backdrop,
+.homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .cardPadder-overflowBackdrop,
+.homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .overflowBackdropCard-textCardPadder {
   padding-bottom: 150% !important;
 }
 
@@ -719,92 +705,92 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
 }
 
 @media (min-width: 25em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 31.2vw !important;
   }
 }
 
 @media (min-width: 43.75em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 25% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 23.1vw !important;
   }
 }
 
 @media (orientation: landscape) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 23.1vw !important;
   }
 }
 
 @media (min-width: 50em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 20% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 18.5vw !important;
   }
 }
 
 @media (min-width: 75em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 16.6666666667% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 15.5vw !important;
   }
 }
 
 @media (min-width: 87.5em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 14.2857142857% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 13.3vw !important;
   }
 }
 
 @media (min-width: 100em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 12.5% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 11.6vw !important;
   }
 }
 
 @media (min-width: 120em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 11.1111111111% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 10.41vw !important;
   }
 }
 
 @media (min-width: 131.25em) {
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .backdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
     width: 10% !important;
   }
 
-  .homeSectionsContainer .itemsContainer[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+  .homeSectionsContainer .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
     width: 9.3vw !important;
   }
 }
 
-.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .backdropCard {
+.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .backdropCard {
   width: 16.6666666667% !important;
 }
 
-.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor="videoplayback,markplayed"] > .overflowBackdropCard {
+.homeSectionsContainer .itemsContainer.itemsContainer-tv[data-monitor*="videoplayback"][data-monitor*="markplayed"] > .overflowBackdropCard {
   width: 15.6vw !important;
 }
 
@@ -818,7 +804,6 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
 .actionSheet,
 .focuscontainer.dialog,
 .toast,
-.appfooter,
 .playlistSectionButton,
 .nowPlayingPlaylist,
 .MuiPaper-root,
@@ -1709,20 +1694,11 @@ a[data-role="button"]:focus-visible {
 }
 
 .layout-desktop #itemDetailPage .detailRibbon > .detailSectionContent {
-  background-color: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  box-sizing: border-box;
   display: grid;
   gap: 0.25rem;
   margin: 0 !important;
-  max-width: 100% !important;
-  min-width: 0;
   overflow: hidden;
   padding: 0 !important;
-  width: 100% !important;
 }
 
 .layout-desktop #itemDetailPage .detailRibbon > .detailSectionContent > * {
@@ -1751,26 +1727,17 @@ a[data-role="button"]:focus-visible {
 
 .layout-desktop #itemDetailPage .detailRibbon > .itemDetailsGroup {
   align-items: stretch;
-  background-color: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
   gap: 0.28rem;
   margin: 0 !important;
-  max-width: 100% !important;
-  min-width: 0;
   overflow: hidden;
   padding: 0 0 0.65rem !important;
-  width: 100% !important;
 }
 
-.layout-desktop #itemDetailPage .itemDetailsGroup > .MuiBox-root.css-0,
-.layout-desktop #itemDetailPage .itemDetailsGroup .detailsGroupItem.MuiBox-root.css-0 {
+.layout-desktop #itemDetailPage .itemDetailsGroup > .MuiBox-root,
+.layout-desktop #itemDetailPage .itemDetailsGroup .detailsGroupItem.MuiBox-root {
   box-sizing: border-box;
   max-width: 100% !important;
   min-width: 0;
@@ -2059,7 +2026,6 @@ a[data-role="button"]:focus-visible {
 @media (max-width: 50em) {
   :root {
     --witzi-radius-lg: 10px;
-    --witzi-radius-xl: 12px;
   }
 
   .backgroundContainer:not(.withBackdrop) {

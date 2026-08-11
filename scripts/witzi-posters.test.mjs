@@ -279,7 +279,6 @@ test('uses loadable posters and retains native artwork when candidates fail', as
   for (const fallback of cards.slice(5)) {
     assert.equal(fallback.dataset.witziArtwork, 'fallback');
     assert.equal(fallback.classList.contains('witzi-poster-card'), false);
-    assert.equal(fallback.classList.contains('witzi-native-fallback'), true);
     assert.match(fallback.image.getAttribute('data-src'), /\/Images\/Backdrop/);
     assert.match(fallback.image.style.backgroundImage, /\/Images\/Backdrop/);
   }
@@ -460,11 +459,6 @@ test('moves all live detail content into one ribbon panel', async () => {
       if (index >= 0) this.children.splice(index, 1);
       child.parentNode = null;
     },
-    querySelector(selector) {
-      if (selector === '.witzi-ribbon-content') return null;
-      if (selector === '.mainDetailButtons') return buttons;
-      return null;
-    },
     getBoundingClientRect() {
       return { height: 180, top: 80 + ribbonOffset, width: 800 };
     },
@@ -510,32 +504,8 @@ test('moves all live detail content into one ribbon panel', async () => {
     document: {
       readyState: 'complete',
       documentElement: { setAttribute() {}, removeAttribute() {} },
-      createElement() {
-        return {
-          children: [],
-          classList: new ClassList(),
-          contains(child) {
-            return this.children.includes(child);
-          },
-          insertBefore(child, reference) {
-            const currentIndex = this.children.indexOf(child);
-            if (currentIndex >= 0) this.children.splice(currentIndex, 1);
-            const referenceIndex = reference ? this.children.indexOf(reference) : -1;
-            const index = referenceIndex >= 0 ? referenceIndex : this.children.length;
-            this.children.splice(index, 0, child);
-            child.parentNode = this;
-          },
-          removeChild(child) {
-            const index = this.children.indexOf(child);
-            if (index >= 0) this.children.splice(index, 1);
-            child.parentNode = null;
-          }
-        };
-      },
-      querySelector(selector) {
-        return selector === '#itemDetailPage' ? page : null;
-      },
-      querySelectorAll() { return []; },
+      querySelector() { return null; },
+      querySelectorAll(selector) { return selector === '#itemDetailPage' ? [page] : []; },
       addEventListener() {}
     },
     MutationObserver: class {
@@ -618,6 +588,137 @@ test('moves all live detail content into one ribbon panel', async () => {
   assert.equal(ribbonStyleWrites, 1);
 });
 
+test('ignores unrelated mutation churn and scopes DOM scans to affected features', async () => {
+  const counts = {
+    backdrops: 0,
+    cards: 0,
+    details: 0,
+    playback: 0
+  };
+  let observerCallback;
+  const cardScope = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]';
+  const context = {
+    console,
+    document: {
+      readyState: 'complete',
+      documentElement: { removeAttribute() {}, setAttribute() {} },
+      querySelector(selector) {
+        if (selector === '.backdropContainer') counts.backdrops += 1;
+        if (selector === '.videoPlayerContainer') counts.playback += 1;
+        return null;
+      },
+      querySelectorAll(selector) {
+        if (selector === `${cardScope} .card[data-id]`) counts.cards += 1;
+        if (selector === '#itemDetailPage') counts.details += 1;
+        return [];
+      },
+      addEventListener() {}
+    },
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() {}
+    },
+    setTimeout,
+    clearTimeout
+  };
+  context.window = {
+    addEventListener() {},
+    clearTimeout,
+    requestAnimationFrame: (callback) => setTimeout(callback, 0),
+    setTimeout: unrefTimeout
+  };
+
+  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  Object.keys(counts).forEach((key) => { counts[key] = 0; });
+
+  const unrelated = {
+    closest() { return null; },
+    matches() { return false; },
+    querySelector() { return null; }
+  };
+  observerCallback([{ type: 'attributes', attributeName: 'style', target: unrelated }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 0, details: 0, playback: 0 });
+
+  const unrelatedDetailChild = {
+    closest(selector) { return selector === '#itemDetailPage' ? {} : null; },
+    matches() { return false; }
+  };
+  observerCallback([{ type: 'attributes', attributeName: 'class', target: unrelatedDetailChild }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 0, details: 0, playback: 0 });
+
+  observerCallback([{
+    type: 'childList',
+    target: unrelatedDetailChild,
+    addedNodes: [unrelated],
+    removedNodes: []
+  }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 0, details: 0, playback: 0 });
+
+  const unrelatedCardChild = {
+    closest(selector) { return selector === cardScope ? {} : null; },
+    matches() { return false; },
+    querySelector() { return null; }
+  };
+  observerCallback([{
+    type: 'childList',
+    target: unrelatedCardChild,
+    addedNodes: [unrelated],
+    removedNodes: []
+  }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 0, details: 0, playback: 0 });
+
+  const cardImage = {
+    closest(selector) { return selector === cardScope ? {} : null; },
+    matches(selector) { return selector === '.cardImageContainer'; }
+  };
+  observerCallback([{ type: 'attributes', attributeName: 'data-src', target: cardImage }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 1, details: 0, playback: 0 });
+
+  const nestedCardImage = {
+    closest(selector) { return selector === cardScope ? {} : null; },
+    matches(selector) { return selector === '.cardImageContainer img'; }
+  };
+  observerCallback([{ type: 'attributes', attributeName: 'src', target: nestedCardImage }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 2, details: 0, playback: 0 });
+
+  const detailNode = {
+    closest(selector) { return selector === '#itemDetailPage' ? {} : null; },
+    matches(selector) { return selector.includes('.detailSectionContent'); }
+  };
+  observerCallback([{ type: 'attributes', attributeName: 'class', target: detailNode }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 0, cards: 2, details: 1, playback: 0 });
+
+  const backdropImage = {
+    closest() { return null; },
+    matches(selector) { return selector === '.backdropImage'; }
+  };
+  observerCallback([{ type: 'attributes', attributeName: 'data-url', target: backdropImage }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 1, cards: 2, details: 1, playback: 0 });
+
+  const videoNode = {
+    matches(selector) { return selector === '.videoPlayerContainer'; },
+    querySelector() { return null; }
+  };
+  observerCallback([{
+    type: 'childList',
+    target: unrelated,
+    addedNodes: [videoNode],
+    removedNodes: []
+  }]);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(counts, { backdrops: 1, cards: 2, details: 1, playback: 1 });
+});
+
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
 
@@ -631,7 +732,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.match(
     css,
-    /html:has\(\.backgroundContainer\.withBackdrop\)[\s\S]*#reactRoot:has\(\.backgroundContainer\.withBackdrop\)[\s\S]*background-color:\s*transparent\s*!important;/
+    /html:has\(\.backgroundContainer\.withBackdrop\) :is\(body, #reactRoot\)[\s\S]*background-color:\s*transparent\s*!important;/
   );
   assert.match(
     css,
@@ -643,8 +744,8 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.match(css, /\.witzi-backdrop-cache-layer\.witzi-backdrop-cache-active\s*\{[^}]*opacity:\s*0\.66;/s);
   assert.match(css, /\.backdropContainer\.witzi-backdrop-cache-ready \.backdropImage/);
-  assert.match(css, /html\[data-witzi-video-active="true"\] \.backgroundContainer/);
-  assert.match(css, /html:has\(\.videoPlayerContainer\) \.witzi-backdrop-cache/);
+  assert.match(css, /html\[data-witzi-video-active="true"\] :is\(\.backgroundContainer, \.backdropContainer, \.witzi-backdrop-cache\)/);
+  assert.match(css, /html:has\(\.videoPlayerContainer\) :is\(\.backgroundContainer, \.backdropContainer, \.witzi-backdrop-cache\)/);
   assert.match(css, /@keyframes witzi-backdrop-fadein/);
   assert.match(
     css,
@@ -655,7 +756,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
     /\.cardPadder-backdrop,[\s\S]*padding-bottom:\s*150%\s*!important;/
   );
   assert.doesNotMatch(css, /\.backdropCard\.witzi-poster-card/);
-  assert.doesNotMatch(css, /\.witzi-no-poster-card \.cardImageContainer/);
+  assert.doesNotMatch(css, /--witzi-radius-xl:/);
   assert.doesNotMatch(css, /\.card:hover \.cardBox\s*\{[^}]*filter:\s*brightness/s);
   assert.match(
     css,
@@ -864,11 +965,11 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(css, /\.detailRibbon \.overview\s*\{[^}]*line-height:\s*1\.42;[^}]*margin:\s*0;/s);
   assert.match(
     css,
-    /\.detailRibbon > \.detailSectionContent\s*\{[^}]*background-color:\s*transparent\s*!important;[^}]*border:\s*0\s*!important;[^}]*box-sizing:\s*border-box;[^}]*display:\s*grid;[^}]*margin:\s*0\s*!important;[^}]*max-width:\s*100%\s*!important;[^}]*overflow:\s*hidden;[^}]*width:\s*100%\s*!important;/s
+    /\.detailRibbon > \.detailSectionContent\s*\{[^}]*display:\s*grid;[^}]*margin:\s*0\s*!important;[^}]*overflow:\s*hidden;[^}]*padding:\s*0\s*!important;/s
   );
   assert.match(
     css,
-    /\.detailRibbon > \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*border:\s*0\s*!important;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;[^}]*margin:\s*0\s*!important;[^}]*max-width:\s*100%\s*!important;[^}]*overflow:\s*hidden;[^}]*padding:\s*0 0 0\.65rem\s*!important;[^}]*width:\s*100%\s*!important;/s
+    /\.detailRibbon > \.itemDetailsGroup\s*\{[^}]*align-items:\s*stretch;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*flex-wrap:\s*nowrap;[^}]*margin:\s*0\s*!important;[^}]*overflow:\s*hidden;[^}]*padding:\s*0 0 0\.65rem\s*!important;/s
   );
   assert.match(
     css,
@@ -876,8 +977,9 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.itemDetailsGroup > \.MuiBox-root\.css-0,[\s\S]*\.itemDetailsGroup \.detailsGroupItem\.MuiBox-root\.css-0\s*\{[^}]*width:\s*100%;/s
+    /\.itemDetailsGroup > \.MuiBox-root,[\s\S]*\.itemDetailsGroup \.detailsGroupItem\.MuiBox-root\s*\{[^}]*width:\s*100%;/s
   );
+  assert.doesNotMatch(css, /\.MuiBox-root\.css-0/);
   assert.doesNotMatch(css, /\.layout-desktop \.detailRibbon\s*\{[^}]*grid-template-areas:/s);
   assert.match(
     css,
@@ -887,7 +989,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
     css,
     /#itemDetailPage\[data-witzi-detail-content="active"\]:has\(\.nextUpSection:not\(\.hide\)\) #listChildrenCollapsible:not\(\.hide\),[\s\S]*order:\s*-20;/s
   );
-  assert.match(helper, /function detailContentCandidate\(page, host, selector, sourceSelector = selector\)/);
+  assert.match(helper, /function detailContentCandidate\(host, candidates, preferredCandidates = candidates\)/);
   assert.doesNotMatch(helper, /DETAIL_RIBBON_CORRECTION/);
   assert.match(helper, /const alignedDetailRibbons = new WeakSet\(\);/);
   assert.match(helper, /function alignDetailRibbonOnce\(page, ribbon\)/);
@@ -895,22 +997,29 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(helper, /ribbon\.style\.setProperty\(DETAIL_RIBBON_ALIGN_OFFSET, `\$\{offset\}px`\)/);
   assert.match(helper, /alignedDetailRibbons\.add\(ribbon\);/);
   assert.match(helper, /function scheduleDetail\(\)/);
+  assert.match(helper, /function scheduleCards\(\)/);
+  assert.match(helper, /function scheduleBackdrop\(\)/);
+  assert.match(helper, /function schedulePlayback\(\)/);
   assert.match(helper, /function scheduleMedia\(\)/);
   assert.match(helper, /function mutationChangesDetailLayout\(mutation\)/);
-  assert.match(helper, /\['class', 'data-id'\]\.includes\(mutation\.attributeName\)/);
+  assert.match(helper, /mutation\.attributeName === 'class' \|\| mutation\.attributeName === 'data-id'/);
+  assert.match(helper, /attributeFilter: \['class', 'data-id', 'data-src', 'data-url', 'src', 'srcset'\]/);
+  assert.doesNotMatch(helper, /attributeFilter: \[[^\]]*'style'/);
   assert.match(helper, /candidates\.find\(\(element\) => !host\.contains\?\.\(element\)\)/);
   assert.match(helper, /function syncDetailRibbonChildren\(ribbon, content, managedContent\)/);
   assert.match(helper, /content\.forEach\(\(element\) => ribbon\.insertBefore\(element, null\)\)/);
   assert.match(helper, /function syncDetailRibbonContent\(\)/);
-  assert.match(helper, /const info = detailContentCandidate\(page, ribbon, '\.infoWrapper'\);/);
-  assert.match(helper, /const buttons = detailContentCandidate\(page, ribbon, '\.mainDetailButtons'\);/);
+  assert.match(helper, /const infoCandidates = \[\.\.\.page\.querySelectorAll\('\.infoWrapper'\)\];/);
+  assert.match(helper, /const info = detailContentCandidate\(ribbon, infoCandidates\);/);
+  assert.match(helper, /const buttons = detailContentCandidate\(ribbon, buttonCandidates\);/);
   assert.match(helper, /'\.overview\.detail-clamp-text'/);
   assert.match(helper, /const content = \[info, buttons, sectionContent, group\]\.filter\(Boolean\);/);
   assert.match(helper, /sectionContent\.parentNode === ribbon/);
   assert.match(helper, /group\.parentNode === ribbon/);
-  assert.match(helper, /pages\.forEach\(syncDetailRibbonPage\)/);
+  assert.match(helper, /document\.querySelectorAll\(DETAIL_PAGE_SELECTOR\)\.forEach\(syncDetailRibbonPage\)/);
   assert.match(helper, /setAttribute\('data-witzi-detail-content', 'active'\)/);
-  assert.match(helper, /window\.addEventListener\('resize', schedule\)/);
+  assert.doesNotMatch(helper, /window\.addEventListener\('resize'/);
+  assert.doesNotMatch(helper, /witzi-(?:poster-pending|native-fallback|no-poster-card)/);
 });
 
 test('preserves existing episode posters before starting FFmpeg work', async () => {
@@ -935,4 +1044,22 @@ test('preserves existing episode posters before starting FFmpeg work', async () 
   assert.match(source, /new\[\] \{ directory, Path\.Combine\(directory, "metadata"\) \}/);
   assert.match(source, /var thumbnailName = mediaName \+ "-thumb";/);
   assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
+});
+
+test('keeps a current injected helper in place around other plugin scripts', async () => {
+  const source = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/InstallWitziWebHelperTask.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+
+  assert.match(source, /private static readonly Regex HelperBlockPattern/);
+  assert.match(source, /existingBlocks\.Count == 1/);
+  assert.match(source, /string\.Equals\(existingBlocks\[0\]\.Value, injection, StringComparison\.Ordinal\)/);
+  assert.match(source, /HelperBlockPattern\.Replace\(/);
+  assert.match(source, /if \(replacementWritten\)/);
+  assert.doesNotMatch(source, /withoutPreviousHelper/);
+  assert.doesNotMatch(source, /Regex\.Replace\(current, markerPattern, string\.Empty/);
 });
