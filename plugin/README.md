@@ -13,9 +13,13 @@ The output is `<episode video basename>.jpg` beside the video. That filename is
 recognized as `ImageType.Primary` by Jellyfin 12's `EpisodeLocalImageProvider`,
 so native clients can use the image without the Witzi browser helper.
 
-The plugin does not overwrite an existing image sidecar. It also leaves an
-existing portrait Primary image alone. Media folders must be writable by the
-Jellyfin server account.
+Before starting FFmpeg, the plugin checks Jellyfin's registered Primary image
+and every episode-specific sidecar name supported by Jellyfin's local image
+provider. This includes the episode basename and `-thumb` variants, all
+supported image extensions, and both the media directory and its `metadata`
+subdirectory. Existing posters are never regenerated or overwritten; Primary
+images whose dimensions cannot be determined are preserved conservatively.
+Media folders must be writable by the Jellyfin server account.
 
 After installation and a server restart, run **Dashboard -> Scheduled Tasks ->
 Library -> Generate Witzi episode posters**. The plugin does not create an

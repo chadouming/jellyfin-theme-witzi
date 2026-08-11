@@ -912,3 +912,27 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.match(helper, /setAttribute\('data-witzi-detail-content', 'active'\)/);
   assert.match(helper, /window\.addEventListener\('resize', schedule\)/);
 });
+
+test('preserves existing episode posters before starting FFmpeg work', async () => {
+  const source = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/GenerateEpisodePostersTask.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+  const processEpisode = source.slice(
+    source.indexOf('private async Task ProcessEpisode'),
+    source.indexOf('private static bool CanProcess')
+  );
+
+  assert.match(source, /IncludeItemTypes = \[BaseItemKind\.Episode\]/);
+  assert.match(source, /GetItemList\(query\)\.OfType<Episode>\(\)/);
+  assert.match(source, /private async Task ProcessEpisode\(Episode episode,/);
+  assert.ok(processEpisode.indexOf('File.Exists(posterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
+  assert.ok(processEpisode.indexOf('HasExistingPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
+  assert.match(source, /BaseItem\.SupportedImageExtensions\.Contains\(/);
+  assert.match(source, /new\[\] \{ directory, Path\.Combine\(directory, "metadata"\) \}/);
+  assert.match(source, /var thumbnailName = mediaName \+ "-thumb";/);
+  assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
+});

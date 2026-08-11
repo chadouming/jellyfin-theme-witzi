@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 
 /// <summary>
-/// Generates portrait sidecar images for episodes that do not already have portrait artwork.
+/// Generates portrait sidecar images for episodes that do not already have poster artwork.
 /// </summary>
 public sealed class GenerateEpisodePostersTask : IScheduledTask
 {
@@ -163,8 +163,9 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             return;
         }
 
-        if (HasPortraitPrimary(episode))
+        if (HasExistingPoster(episode, mediaPath))
         {
+            _logger.LogDebug("Skipping {EpisodePath}: an episode poster already exists", mediaPath);
             return;
         }
 
@@ -229,20 +230,104 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             && File.Exists(episode.Path);
     }
 
-    private bool HasPortraitPrimary(Episode episode)
+    private bool HasExistingPoster(Episode episode, string mediaPath)
     {
         var image = episode.GetImageInfo(ImageType.Primary, 0);
-        if (image is null)
+        if (image is not null)
+        {
+            if (image.Width > 0 && image.Height > 0)
+            {
+                if (image.Height > image.Width)
+                {
+                    return true;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(image.Path) && File.Exists(image.Path))
+            {
+                try
+                {
+                    var dimensions = _imageProcessor.GetImageDimensions(image.Path);
+                    if (dimensions.Height > dimensions.Width)
+                    {
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // An existing Primary image with unreadable dimensions is
+                    // preserved. Replacing user artwork is worse than skipping
+                    // one episode whose image cannot be classified.
+                    return true;
+                }
+            }
+            else if (image.Width <= 0 || image.Height <= 0)
+            {
+                // Remote and provider-managed Primary images do not always
+                // expose dimensions or a local path. Treat them as existing
+                // posters unless Jellyfin positively identifies a landscape
+                // image above.
+                return true;
+            }
+        }
+
+        return HasExistingPosterSidecar(mediaPath);
+    }
+
+    private bool HasExistingPosterSidecar(string mediaPath)
+    {
+        var directory = Path.GetDirectoryName(mediaPath);
+        if (string.IsNullOrEmpty(directory))
         {
             return false;
         }
 
-        if (image.Width > 0 && image.Height > 0)
+        var mediaName = Path.GetFileNameWithoutExtension(mediaPath);
+        var thumbnailName = mediaName + "-thumb";
+        var searchDirectories = new[] { directory, Path.Combine(directory, "metadata") };
+
+        foreach (var searchDirectory in searchDirectories)
         {
-            return image.Height > image.Width;
+            if (!Directory.Exists(searchDirectory))
+            {
+                continue;
+            }
+
+            string[] files;
+            try
+            {
+                files = Directory.GetFiles(searchDirectory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogDebug(ex, "Could not inspect episode artwork in {ArtworkDirectory}", searchDirectory);
+                continue;
+            }
+
+            foreach (var file in files)
+            {
+                if (!BaseItem.SupportedImageExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var candidateName = Path.GetFileNameWithoutExtension(file);
+                if (string.Equals(candidateName, mediaName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Jellyfin treats an exact media-basename image as the
+                    // episode Primary. It belongs to the user even if its
+                    // dimensions cannot be inspected, so never replace it.
+                    return true;
+                }
+
+                if (string.Equals(candidateName, thumbnailName, StringComparison.OrdinalIgnoreCase)
+                    && IsPortrait(file))
+                {
+                    return true;
+                }
+            }
         }
 
-        return image.IsLocalFile && File.Exists(image.Path) && IsPortrait(image.Path);
+        return false;
     }
 
     private bool IsPortrait(string path)
