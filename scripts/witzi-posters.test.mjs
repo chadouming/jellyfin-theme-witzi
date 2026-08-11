@@ -684,7 +684,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
   );
   assert.match(
     css,
-    /\.emby-scrollbuttons\s*\{[^}]*background-color:\s*var\(--witzi-surface\)\s*!important;[^}]*border:\s*1px solid[^;]+;[^}]*color:\s*var\(--witzi-text\)\s*!important;/s
+    /\.emby-scrollbuttons\s*\{[^}]*background:\s*transparent\s*!important;[^}]*border:\s*0\s*!important;[^}]*box-shadow:\s*none\s*!important;[^}]*padding:\s*0\s*!important;/s
   );
   assert.match(
     css,

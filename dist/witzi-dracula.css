@@ -524,15 +524,15 @@ html:has(.videoPlayerContainer) .witzi-backdrop-cache {
 }
 
 .emby-scrollbuttons {
-  background-color: var(--witzi-surface) !important;
-  border: 1px solid rgb(var(--witzi-border-rgb) / 0.9);
-  border-radius: 0.8rem;
-  box-shadow: 0 5px 16px rgb(var(--witzi-bg-rgb) / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   color: var(--witzi-text) !important;
   gap: 0.18rem;
   min-height: 0;
   min-width: 0;
-  padding: 0.24rem !important;
+  padding: 0 !important;
   top: 0.35rem;
 }
 
