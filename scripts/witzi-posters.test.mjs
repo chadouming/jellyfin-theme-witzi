@@ -728,15 +728,23 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
-    /\.layout-mobile #itemDetailPage \.itemBackdrop\s*\{[^}]*background-position:\s*center\s*!important;[^}]*height:\s*clamp\(11rem, 56\.25vw, 24rem\)\s*!important;/s
+    /\.layout-mobile #itemDetailPage > \.itemBackdrop\s*\{[^}]*display:\s*none\s*!important;/s
   );
   assert.match(
     css,
-    /\.layout-mobile #itemDetailPage:has\(> \.itemBackdrop\[style\*="background-image"\]\) \.detailRibbon \.detailImageContainer\s*\{[^}]*display:\s*none\s*!important;/s
+    /\.layout-mobile #itemDetailPage \.detailRibbon \.infoWrapper\s*\{[^}]*display:\s*contents;/s
   );
   assert.match(
     css,
-    /\.layout-mobile #itemDetailPage:has\(> \.itemBackdrop\[style\*="background-image"\]\) \.detailRibbon :is\(\.infoWrapper, \.mainDetailButtons\)\s*\{[^}]*padding-inline:\s*0\s*!important;/s
+    /\.layout-mobile #itemDetailPage \.detailRibbon \.infoWrapper > \.detailImageContainer\s*\{[^}]*display:\s*flex\s*!important;[^}]*height:\s*var\(--witzi-mobile-detail-poster-height\);[^}]*justify-content:\s*center;/s
+  );
+  assert.match(
+    css,
+    /\.layout-mobile #itemDetailPage \.detailRibbon \.detailImageContainer \.card\s*\{[^}]*position:\s*relative;[^}]*width:\s*var\(--witzi-mobile-detail-poster-width\)\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.layout-mobile #itemDetailPage \.detailRibbon :is\(\.nameContainer, \.itemMiscInfo, \.mainDetailButtons\)\s*\{[^}]*justify-content:\s*center\s*!important;[^}]*text-align:\s*center;/s
   );
   assert.match(
     css,

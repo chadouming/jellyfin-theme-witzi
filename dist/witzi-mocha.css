@@ -1892,32 +1892,118 @@ a[data-role="button"]:focus-visible {
 }
 
 /*
- * Mobile details use Jellyfin's landscape Details Banner as the artwork
- * header. The duplicate Primary card normally floated inside .infoWrapper is
- * removed, along with the inline padding Jellyfin reserves for that card.
- * Desktop keeps its anchored portrait rail above, entirely unchanged.
+ * Mobile details promote Jellyfin's Primary image above the information
+ * panel. display: contents lets the poster escape .infoWrapper's layout while
+ * keeping the live DOM untouched; the pseudo-element then draws one ribbon
+ * behind every remaining detail node. Desktop retains its fixed poster rail.
  */
-.layout-mobile #itemDetailPage .itemBackdrop {
-  background-attachment: scroll !important;
-  background-position: center !important;
-  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
-  border-radius: 0 0 1.05rem 1.05rem;
-  box-shadow: 0 8px 26px rgb(0 0 0 / 0.18);
-  height: clamp(11rem, 56.25vw, 24rem) !important;
-  overflow: hidden;
+.layout-mobile #itemDetailPage {
+  --witzi-mobile-detail-gap: 0.75rem;
+  --witzi-mobile-detail-padding: clamp(0.9rem, 4vw, 1.25rem);
+  --witzi-mobile-detail-poster-height: calc(var(--witzi-mobile-detail-poster-width) * 1.5);
+  --witzi-mobile-detail-poster-width: clamp(10.5rem, 48vw, 15rem);
 }
 
-.layout-mobile #itemDetailPage .detailRibbon {
-  margin: 0.55rem 4%;
-  padding: 0.85rem 4%;
-}
-
-.layout-mobile #itemDetailPage:has(> .itemBackdrop[style*="background-image"]) .detailRibbon .detailImageContainer {
+.layout-mobile #itemDetailPage > .itemBackdrop {
   display: none !important;
 }
 
-.layout-mobile #itemDetailPage:has(> .itemBackdrop[style*="background-image"]) .detailRibbon :is(.infoWrapper, .mainDetailButtons) {
-  padding-inline: 0 !important;
+.layout-mobile #itemDetailPage .detailPageWrapperContainer {
+  padding-top: calc(var(--witzi-header-height) + 0.75rem) !important;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon {
+  background: transparent !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: grid !important;
+  gap: 0.2rem;
+  isolation: isolate;
+  margin: 0 4% 0.75rem;
+  overflow: visible;
+  padding: 0 0 var(--witzi-mobile-detail-padding) !important;
+  position: relative;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon::before {
+  background-color: var(--witzi-surface);
+  background-image: none;
+  border: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-radius: 1.05rem;
+  bottom: 0;
+  box-shadow: 0 8px 26px rgb(0 0 0 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.035);
+  content: "";
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: calc(var(--witzi-mobile-detail-poster-height) + var(--witzi-mobile-detail-gap));
+  z-index: 0;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon > *,
+.layout-mobile #itemDetailPage .detailRibbon .infoWrapper > * {
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon .infoWrapper {
+  display: contents;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon .infoWrapper > .detailImageContainer {
+  align-items: flex-start;
+  display: flex !important;
+  height: var(--witzi-mobile-detail-poster-height);
+  justify-content: center;
+  margin-bottom: calc(var(--witzi-mobile-detail-gap) + var(--witzi-mobile-detail-padding));
+  padding: 0 !important;
+  width: 100%;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon .detailImageContainer .card {
+  bottom: auto !important;
+  filter: drop-shadow(0 8px 22px rgb(0 0 0 / 0.32));
+  float: none;
+  left: auto !important;
+  margin: 0 !important;
+  max-height: none;
+  max-width: none;
+  position: relative;
+  right: auto !important;
+  top: auto !important;
+  width: var(--witzi-mobile-detail-poster-width) !important;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon .detailImageContainer .cardPadder {
+  padding-bottom: 150% !important;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon .infoWrapper > :not(.detailImageContainer),
+.layout-mobile #itemDetailPage .detailRibbon > :is(.mainDetailButtons, .detailSectionContent, .itemDetailsGroup) {
+  margin-inline: auto !important;
+  padding-inline: var(--witzi-mobile-detail-padding) !important;
+  width: 100% !important;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon :is(.nameContainer, .itemMiscInfo, .mainDetailButtons) {
+  align-items: center;
+  justify-content: center !important;
+  text-align: center;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon :is(.overview, .detailSectionContent, .itemDetailsGroup) {
+  margin-inline: auto !important;
+  text-align: center;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon .itemDetailsGroup,
+.layout-mobile #itemDetailPage .detailRibbon .detailsGroupItem,
+.layout-mobile #itemDetailPage .detailRibbon .focuscontainer-x {
+  align-items: center;
+  justify-content: center !important;
 }
 
 .noBackdropTransparency .detailPageWrapperContainer {
