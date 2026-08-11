@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "0.1.10.0",
+        "changelog": "Optimizes the embedded browser helper by processing only affected cards, backdrops, playback containers, and detail layouts; supports Jellyfin's modern image updates; and updates the installed helper in place without reordering other plugin injections.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.11/Witzi.Episode.Posters_0.1.10.0.zip",
+        "checksum": "4f6d55b45349cb3a6145ce87dc5d20d2",
+        "timestamp": "2026-08-11T21:33:00Z"
+      },
+      {
         "version": "0.1.9.0",
         "changelog": "Limits generation to episodes and checks registered Primary artwork plus every Jellyfin-recognized episode sidecar before starting FFmpeg, preserving existing posters without regenerating or overwriting them.",
         "targetAbi": "12.0.0.0",
