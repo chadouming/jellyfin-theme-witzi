@@ -728,6 +728,18 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   );
   assert.match(
     css,
+    /\.layout-mobile #itemDetailPage \.itemBackdrop\s*\{[^}]*background-position:\s*center\s*!important;[^}]*height:\s*clamp\(11rem, 56\.25vw, 24rem\)\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.layout-mobile #itemDetailPage:has\(> \.itemBackdrop\[style\*="background-image"\]\) \.detailRibbon \.detailImageContainer\s*\{[^}]*display:\s*none\s*!important;/s
+  );
+  assert.match(
+    css,
+    /\.layout-mobile #itemDetailPage:has\(> \.itemBackdrop\[style\*="background-image"\]\) \.detailRibbon :is\(\.infoWrapper, \.mainDetailButtons\)\s*\{[^}]*padding-inline:\s*0\s*!important;/s
+  );
+  assert.match(
+    css,
     /--witzi-header-height:\s*2\.9rem;[\s\S]*--witzi-header-control:\s*2\.5rem;[\s\S]*--witzi-header-radius:\s*0\.72rem;/
   );
   assert.match(

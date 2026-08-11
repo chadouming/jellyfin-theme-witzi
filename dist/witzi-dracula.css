@@ -1891,9 +1891,33 @@ a[data-role="button"]:focus-visible {
   color: var(--witzi-accent) !important;
 }
 
-.layout-mobile .detailRibbon {
+/*
+ * Mobile details use Jellyfin's landscape Details Banner as the artwork
+ * header. The duplicate Primary card normally floated inside .infoWrapper is
+ * removed, along with the inline padding Jellyfin reserves for that card.
+ * Desktop keeps its anchored portrait rail above, entirely unchanged.
+ */
+.layout-mobile #itemDetailPage .itemBackdrop {
+  background-attachment: scroll !important;
+  background-position: center !important;
+  border-bottom: 1px solid rgb(var(--witzi-border-rgb) / 0.72);
+  border-radius: 0 0 1.05rem 1.05rem;
+  box-shadow: 0 8px 26px rgb(0 0 0 / 0.18);
+  height: clamp(11rem, 56.25vw, 24rem) !important;
+  overflow: hidden;
+}
+
+.layout-mobile #itemDetailPage .detailRibbon {
   margin: 0.55rem 4%;
   padding: 0.85rem 4%;
+}
+
+.layout-mobile #itemDetailPage:has(> .itemBackdrop[style*="background-image"]) .detailRibbon .detailImageContainer {
+  display: none !important;
+}
+
+.layout-mobile #itemDetailPage:has(> .itemBackdrop[style*="background-image"]) .detailRibbon :is(.infoWrapper, .mainDetailButtons) {
+  padding-inline: 0 !important;
 }
 
 .noBackdropTransparency .detailPageWrapperContainer {
