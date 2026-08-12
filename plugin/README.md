@@ -11,15 +11,17 @@ the Witzi/Catppuccin palette. The scheduled task uses Jellyfin's **Parallel
 image encoding limit** as its maximum number of concurrent episode workers. If
 that setting is empty, it follows Jellyfin's core-count-based default.
 
-The output is `<episode video basename>-witzi.jpg` beside the video and is
-registered as the episode's `ImageType.Primary`, so native clients can use it
-without the Witzi browser helper. A different previous Primary image is not
-deleted or overwritten; only Jellyfin's active Primary registration changes.
+The reusable output is `<episode video basename>-witzi.jpg` beside the video.
+The task also installs an identical copy as `<episode video basename>.jpg`, the
+episode Primary filename Jellyfin recognizes after later metadata refreshes.
+Native clients can therefore use it without the Witzi browser helper. Existing
+local Primary sidecars are moved to ignored `*-witzi-original*` backup names;
+remote or provider-managed source artwork is not deleted.
 
 Before starting FFmpeg, the plugin checks for the dedicated Witzi file in both
 the media directory and its `metadata` subdirectory. If it is already Primary,
 the episode is skipped; if it exists but another image became Primary, the
-existing file is registered again without regenerating it. The plugin also
+existing file is installed again without regenerating it. The plugin also
 recognizes a registered 1000 x 1500 `<episode video basename>.jpg` created by
 versions through 0.1.10. Reserved Witzi files are never overwritten. Media
 folders must be writable by the Jellyfin server account.

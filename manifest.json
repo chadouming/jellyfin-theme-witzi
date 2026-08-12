@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "0.1.12.0",
+        "changelog": "Keeps Witzi artwork selected after Jellyfin metadata refreshes by installing it under the provider-recognized episode Primary filename, while preserving conflicting local sidecars as recoverable backups and reusing existing Witzi output without rerunning FFmpeg.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.13/Witzi.Episode.Posters_0.1.12.0.zip",
+        "checksum": "32bea3c55f0714025cdd6a0193154dc7",
+        "timestamp": "2026-08-12T13:55:20Z"
+      },
+      {
         "version": "0.1.11.0",
         "changelog": "Generates dedicated Witzi sidecars, reuses existing Witzi artwork without rerunning FFmpeg, replaces a different Primary registration without deleting its file, and processes episodes concurrently using Jellyfin's Parallel image encoding limit.",
         "targetAbi": "12.0.0.0",

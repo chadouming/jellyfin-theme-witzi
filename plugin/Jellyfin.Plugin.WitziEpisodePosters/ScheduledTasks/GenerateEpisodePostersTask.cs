@@ -167,24 +167,29 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             return;
         }
 
-        // Keep Witzi's artwork separate from provider- or user-managed Primary
-        // sidecars. RegisterPoster makes this dedicated file the active Primary
-        // without deleting or overwriting the previous artwork.
+        // Keep a dedicated Witzi source so it can be identified and reused.
+        // ActivatePoster also installs a copy at <video basename>.jpg because
+        // Jellyfin's episode local-image provider only persists basename and
+        // -thumb sidecars across metadata refreshes.
         var posterPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + "-witzi.jpg");
         var existingPosterPath = FindExistingWitziPoster(episode, mediaPath);
 
         if (existingPosterPath is not null)
         {
-            if (IsCurrentPrimary(episode, existingPosterPath))
+            if (IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath))
             {
                 _logger.LogDebug("Skipping {EpisodePath}: its Witzi poster is already Primary", mediaPath);
             }
             else
             {
-                await RegisterPoster(episode, existingPosterPath, cancellationToken).ConfigureAwait(false);
+                var primaryPosterPath = await ActivatePoster(
+                    episode,
+                    mediaPath,
+                    existingPosterPath,
+                    cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation(
                     "Registered existing Witzi episode poster {PosterPath} as Primary for {EpisodePath}",
-                    existingPosterPath,
+                    primaryPosterPath,
                     mediaPath);
             }
 
@@ -239,8 +244,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             }
 
             await WritePoster(extractedFrames, posterPath, cancellationToken).ConfigureAwait(false);
-            await RegisterPoster(episode, posterPath, cancellationToken).ConfigureAwait(false);
+            var primaryPosterPath = await ActivatePoster(
+                episode,
+                mediaPath,
+                posterPath,
+                cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Generated Witzi episode poster {PosterPath}", posterPath);
+            _logger.LogDebug("Installed Witzi Primary sidecar {PrimaryPosterPath}", primaryPosterPath);
         }
         finally
         {
@@ -324,10 +334,187 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 : null;
     }
 
-    private static bool IsCurrentPrimary(Episode episode, string posterPath)
+    private bool IsPersistentWitziPrimary(Episode episode, string mediaPath, string witziPosterPath)
     {
+        var primaryPosterPath = GetPrimaryPosterPath(mediaPath);
         var primary = episode.GetImageInfo(ImageType.Primary, 0);
-        return primary is not null && PathsEqual(primary.Path, posterPath);
+        return primary is not null
+            && PathsEqual(primary.Path, primaryPosterPath)
+            && (PathsEqual(witziPosterPath, primaryPosterPath) || FilesEqual(witziPosterPath, primaryPosterPath))
+            && GetProviderPrimarySidecars(mediaPath).All(path => PathsEqual(path, primaryPosterPath));
+    }
+
+    private async Task<string> ActivatePoster(
+        Episode episode,
+        string mediaPath,
+        string witziPosterPath,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var primaryPosterPath = GetPrimaryPosterPath(mediaPath);
+
+        foreach (var sidecarPath in GetProviderPrimarySidecars(mediaPath))
+        {
+            if (PathsEqual(sidecarPath, primaryPosterPath)
+                && (PathsEqual(sidecarPath, witziPosterPath) || FilesEqual(sidecarPath, witziPosterPath)))
+            {
+                continue;
+            }
+
+            PreserveOriginalSidecar(sidecarPath);
+        }
+
+        if (!PathsEqual(witziPosterPath, primaryPosterPath))
+        {
+            if (!File.Exists(primaryPosterPath) || !FilesEqual(primaryPosterPath, witziPosterPath))
+            {
+                CopyPosterAtomically(witziPosterPath, primaryPosterPath);
+            }
+        }
+
+        await RegisterPoster(episode, primaryPosterPath, cancellationToken).ConfigureAwait(false);
+        return primaryPosterPath;
+    }
+
+    private static string GetPrimaryPosterPath(string mediaPath)
+    {
+        var directory = Path.GetDirectoryName(mediaPath)
+            ?? throw new ArgumentException("The media path has no containing directory.", nameof(mediaPath));
+        return Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + ".jpg");
+    }
+
+    private static IEnumerable<string> GetProviderPrimarySidecars(string mediaPath)
+    {
+        var directory = Path.GetDirectoryName(mediaPath);
+        if (string.IsNullOrEmpty(directory))
+        {
+            return [];
+        }
+
+        var mediaName = Path.GetFileNameWithoutExtension(mediaPath);
+        var thumbnailName = mediaName + "-thumb";
+        var sidecars = new List<string>();
+
+        foreach (var searchDirectory in new[] { directory, Path.Combine(directory, "metadata") })
+        {
+            if (!Directory.Exists(searchDirectory))
+            {
+                continue;
+            }
+
+            try
+            {
+                sidecars.AddRange(Directory.GetFiles(searchDirectory).Where(path =>
+                {
+                    if (!BaseItem.SupportedImageExtensions.Contains(
+                            Path.GetExtension(path),
+                            StringComparer.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    var candidateName = Path.GetFileNameWithoutExtension(path);
+                    return string.Equals(candidateName, mediaName, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(candidateName, thumbnailName, StringComparison.OrdinalIgnoreCase);
+                }));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Activation will still register the preferred path. A directory
+                // that cannot be enumerated also cannot contain a writable
+                // conflict that this task can safely preserve.
+            }
+        }
+
+        return sidecars;
+    }
+
+    private void PreserveOriginalSidecar(string path)
+    {
+        var directory = Path.GetDirectoryName(path)!;
+        var name = Path.GetFileNameWithoutExtension(path);
+        var extension = Path.GetExtension(path);
+        var backupPath = Path.Combine(directory, name + "-witzi-original" + extension);
+        var suffix = 2;
+
+        while (File.Exists(backupPath))
+        {
+            backupPath = Path.Combine(directory, $"{name}-witzi-original-{suffix}{extension}");
+            suffix++;
+        }
+
+        File.Move(path, backupPath, false);
+        _logger.LogInformation(
+            "Preserved previous episode Primary sidecar {OriginalPath} at {BackupPath}",
+            path,
+            backupPath);
+    }
+
+    private static void CopyPosterAtomically(string sourcePath, string destinationPath)
+    {
+        var temporaryPath = destinationPath + ".witzi-install-" + Guid.NewGuid().ToString("N") + ".tmp.jpg";
+
+        try
+        {
+            File.Copy(sourcePath, temporaryPath, false);
+            File.Move(temporaryPath, destinationPath, false);
+        }
+        finally
+        {
+            TryDelete(temporaryPath);
+        }
+    }
+
+    private static bool FilesEqual(string first, string second)
+    {
+        if (PathsEqual(first, second))
+        {
+            return true;
+        }
+
+        try
+        {
+            var firstInfo = new FileInfo(first);
+            var secondInfo = new FileInfo(second);
+            if (!firstInfo.Exists || !secondInfo.Exists || firstInfo.Length != secondInfo.Length)
+            {
+                return false;
+            }
+
+            using var firstStream = File.OpenRead(first);
+            using var secondStream = File.OpenRead(second);
+            return StreamsEqual(firstStream, secondStream);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool StreamsEqual(Stream first, Stream second)
+    {
+        Span<byte> firstBuffer = stackalloc byte[8192];
+        Span<byte> secondBuffer = stackalloc byte[8192];
+
+        while (true)
+        {
+            var firstRead = first.Read(firstBuffer);
+            var secondRead = second.Read(secondBuffer);
+            if (firstRead != secondRead)
+            {
+                return false;
+            }
+
+            if (firstRead == 0)
+            {
+                return true;
+            }
+
+            if (!firstBuffer[..firstRead].SequenceEqual(secondBuffer[..secondRead]))
+            {
+                return false;
+            }
+        }
     }
 
     private bool HasExpectedDimensions(ItemImageInfo image, string path)
