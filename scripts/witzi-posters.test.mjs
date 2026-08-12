@@ -1018,7 +1018,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.doesNotMatch(helper, /witzi-(?:poster-pending|native-fallback|no-poster-card)/);
 });
 
-test('reuses Witzi episode posters and replaces a different Primary before starting FFmpeg work', async () => {
+test('reuses Witzi episode posters and writes task diagnostics to a dedicated log', async () => {
   const source = await readFile(
     new URL(
       '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/GenerateEpisodePostersTask.cs',
@@ -1027,19 +1027,20 @@ test('reuses Witzi episode posters and replaces a different Primary before start
     'utf8'
   );
   const processEpisode = source.slice(
-    source.indexOf('private async Task ProcessEpisode'),
-    source.indexOf('private static bool CanProcess')
+    source.indexOf('private async Task<EpisodeOutcome> ProcessEpisode'),
+    source.indexOf('private static string? GetIneligibleReason')
   );
 
   assert.match(source, /IncludeItemTypes = \[BaseItemKind\.Episode\]/);
   assert.match(source, /GetItemList\(query\)\.OfType<Episode>\(\)/);
   assert.match(source, /IServerConfigurationManager serverConfigurationManager/);
+  assert.match(source, /IApplicationPaths applicationPaths/);
   assert.match(source, /Configuration\.ParallelImageEncodingLimit/);
   assert.match(source, /configuredParallelLimit > 0[\s\S]*\? configuredParallelLimit[\s\S]*: Environment\.ProcessorCount/);
   assert.match(source, /MaxDegreeOfParallelism = maxConcurrentEpisodes/);
   assert.match(source, /await Parallel\.ForEachAsync\(/);
   assert.match(source, /lock \(progressLock\)/);
-  assert.match(source, /private async Task ProcessEpisode\(Episode episode,/);
+  assert.match(source, /private async Task<EpisodeOutcome> ProcessEpisode\(/);
   assert.ok(processEpisode.indexOf('FindExistingWitziPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('ActivatePoster(') < processEpisode.indexOf('GetVideoStream(episode)'));
@@ -1057,6 +1058,11 @@ test('reuses Witzi episode posters and replaces a different Primary before start
   assert.match(source, /image\.Width == PosterWidth && image\.Height == PosterHeight/);
   assert.doesNotMatch(source, /HasExistingPoster(?:Sidecar)?\(/);
   assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
+  assert.match(source, /LogFileName = "witzi-episode-posters\.log"/);
+  assert.match(source, /PosterRunLog\.Create\(_applicationPaths\.LogDirectoryPath\)/);
+  assert.match(source, /FileMode\.Create/);
+  assert.match(source, /Completed Witzi poster generation/);
+  assert.doesNotMatch(source, /ILogger<GenerateEpisodePostersTask>|_logger\.Log/);
 });
 
 test('keeps a current injected helper in place around other plugin scripts', async () => {

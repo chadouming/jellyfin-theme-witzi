@@ -30,6 +30,9 @@ After installation and a server restart, run **Dashboard -> Scheduled Tasks ->
 Library -> Generate Witzi episode posters**. The plugin does not create an
 automatic trigger; run the task manually whenever new episodes need posters.
 Existing Witzi sidecars are never overwritten, so their colors remain stable.
+Each run replaces `witzi-episode-posters.log` in Jellyfin's configured log
+directory. It contains the per-episode generated, reused, skipped, and failed
+results plus a final summary, instead of sending that detail to the main log.
 
 At server startup, the plugin also installs its embedded `witzi-posters.js`
 helper into Jellyfin Web. This makes the overview and item details live inside

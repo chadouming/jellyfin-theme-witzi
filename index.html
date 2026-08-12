@@ -536,7 +536,7 @@
         <li><strong>Install and restart</strong>Install Witzi Episode Posters from the catalog, then restart Jellyfin.</li>
         <li><strong>Generate once</strong>Run Generate Witzi episode posters under Scheduled Tasks â†’ Library.</li>
       </ol>
-      <p class="notice">Built for Jellyfin ABI 12.0.0.0 / .NET 10. Jellyfin needs write permission to each media folder and Jellyfin Web's <code>index.html</code>. Plugin 0.1.12.0 installs reusable Witzi artwork under Jellyfin's persistent episode Primary filename, backs up conflicting local sidecars, skips completed episodes before FFmpeg starts, and processes episodes concurrently using Jellyfin's Parallel image encoding limit. Poster frame decoding uses an available GPU when FFmpeg supports it and falls back to software otherwise. <a href="https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.13/Witzi.Episode.Posters_0.1.12.0.zip">Download the manual plugin ZIP</a>.</p>
+      <p class="notice">Built for Jellyfin ABI 12.0.0.0 / .NET 10. Jellyfin needs write permission to each media folder and Jellyfin Web's <code>index.html</code>. Plugin 0.1.13.0 installs persistent Witzi Primary artwork and writes per-episode generation, skip, and failure diagnostics to <code>witzi-episode-posters.log</code> instead of Jellyfin's main log. Poster frame decoding uses an available GPU when FFmpeg supports it and falls back to software otherwise. <a href="https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.14/Witzi.Episode.Posters_0.1.13.0.zip">Download the manual plugin ZIP</a>.</p>
     </section>
   </main>
 

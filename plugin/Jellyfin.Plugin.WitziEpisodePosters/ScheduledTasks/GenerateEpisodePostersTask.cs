@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Entities;
@@ -13,7 +15,6 @@ using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 
@@ -43,7 +44,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private readonly IMediaEncoder _mediaEncoder;
     private readonly IImageProcessor _imageProcessor;
     private readonly IServerConfigurationManager _serverConfigurationManager;
-    private readonly ILogger<GenerateEpisodePostersTask> _logger;
+    private readonly IApplicationPaths _applicationPaths;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GenerateEpisodePostersTask"/> class.
@@ -54,14 +55,14 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         IMediaEncoder mediaEncoder,
         IImageProcessor imageProcessor,
         IServerConfigurationManager serverConfigurationManager,
-        ILogger<GenerateEpisodePostersTask> logger)
+        IApplicationPaths applicationPaths)
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
         _mediaEncoder = mediaEncoder;
         _imageProcessor = imageProcessor;
         _serverConfigurationManager = serverConfigurationManager;
-        _logger = logger;
+        _applicationPaths = applicationPaths;
     }
 
     /// <inheritdoc />
@@ -85,6 +86,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     /// <inheritdoc />
     public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
+        using var runLog = PosterRunLog.Create(_applicationPaths.LogDirectoryPath);
         var query = new InternalItemsQuery
         {
             IncludeItemTypes = [BaseItemKind.Episode],
@@ -96,13 +98,16 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         };
 
         var episodeCount = _libraryManager.GetCount(query);
+        runLog.Information($"Starting Witzi poster generation for {episodeCount} episodes.");
         if (episodeCount == 0)
         {
+            runLog.Information("No eligible library episodes were found by the Jellyfin item query.");
             progress.Report(100);
             return;
         }
 
         var completed = 0;
+        var outcomeCounts = new int[Enum.GetValues<EpisodeOutcome>().Length];
         var progressLock = new object();
         var configuredParallelLimit = _serverConfigurationManager.Configuration.ParallelImageEncodingLimit;
         var maxConcurrentEpisodes = configuredParallelLimit > 0
@@ -114,10 +119,8 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             MaxDegreeOfParallelism = maxConcurrentEpisodes
         };
 
-        _logger.LogInformation(
-            "Processing {EpisodeCount} episodes with up to {WorkerCount} concurrent Witzi poster workers",
-            episodeCount,
-            maxConcurrentEpisodes);
+        runLog.Information(
+            $"Using up to {maxConcurrentEpisodes} concurrent episode workers.");
 
         for (var startIndex = 0; startIndex < episodeCount; startIndex += QueryPageSize)
         {
@@ -129,9 +132,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 parallelOptions,
                 async (episode, episodeCancellationToken) =>
                 {
+                    EpisodeOutcome outcome;
                     try
                     {
-                        await ProcessEpisode(episode, episodeCancellationToken).ConfigureAwait(false);
+                        outcome = await ProcessEpisode(
+                            episode,
+                            runLog,
+                            episodeCancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
@@ -139,9 +146,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Could not generate a Witzi poster for {EpisodeName} at {EpisodePath}", episode.Name, episode.Path);
+                        outcome = EpisodeOutcome.Failed;
+                        runLog.Error(
+                            $"Could not generate a Witzi poster for {episode.Name} at {episode.Path}",
+                            ex);
                     }
 
+                    Interlocked.Increment(ref outcomeCounts[(int)outcome]);
                     lock (progressLock)
                     {
                         completed++;
@@ -150,21 +161,33 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 }).ConfigureAwait(false);
         }
 
+        runLog.Information(
+            "Completed Witzi poster generation. "
+            + string.Join(
+                ", ",
+                Enum.GetValues<EpisodeOutcome>().Select(outcome =>
+                    $"{OutcomeLabel(outcome)}={outcomeCounts[(int)outcome]}")));
         progress.Report(100);
     }
 
-    private async Task ProcessEpisode(Episode episode, CancellationToken cancellationToken)
+    private async Task<EpisodeOutcome> ProcessEpisode(
+        Episode episode,
+        PosterRunLog runLog,
+        CancellationToken cancellationToken)
     {
-        if (!CanProcess(episode))
+        var ineligibleReason = GetIneligibleReason(episode);
+        if (ineligibleReason is not null)
         {
-            return;
+            runLog.Warning($"Skipping {episode.Name} at {episode.Path}: {ineligibleReason}.");
+            return EpisodeOutcome.SkippedIneligible;
         }
 
         var mediaPath = episode.Path!;
         var directory = Path.GetDirectoryName(mediaPath);
         if (string.IsNullOrEmpty(directory))
         {
-            return;
+            runLog.Warning($"Skipping {episode.Name} at {mediaPath}: the media path has no containing directory.");
+            return EpisodeOutcome.SkippedIneligible;
         }
 
         // Keep a dedicated Witzi source so it can be identified and reused.
@@ -178,39 +201,35 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         {
             if (IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath))
             {
-                _logger.LogDebug("Skipping {EpisodePath}: its Witzi poster is already Primary", mediaPath);
-            }
-            else
-            {
-                var primaryPosterPath = await ActivatePoster(
-                    episode,
-                    mediaPath,
-                    existingPosterPath,
-                    cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation(
-                    "Registered existing Witzi episode poster {PosterPath} as Primary for {EpisodePath}",
-                    primaryPosterPath,
-                    mediaPath);
+                runLog.Debug($"Already current: {mediaPath}");
+                return EpisodeOutcome.AlreadyCurrent;
             }
 
-            return;
+            var primaryPosterPath = await ActivatePoster(
+                episode,
+                mediaPath,
+                existingPosterPath,
+                runLog,
+                cancellationToken).ConfigureAwait(false);
+            runLog.Information(
+                $"Registered existing Witzi episode poster {primaryPosterPath} as Primary for {mediaPath}");
+            return EpisodeOutcome.ReactivatedExisting;
         }
 
         if (File.Exists(posterPath))
         {
             // A file using Witzi's reserved name should never be overwritten,
             // even if it is corrupt or was placed there by another process.
-            _logger.LogWarning(
-                "Leaving unrecognized Witzi sidecar untouched at {PosterPath}. Move or rename it before rerunning the task.",
-                posterPath);
-            return;
+            runLog.Warning(
+                $"Leaving unrecognized Witzi sidecar untouched at {posterPath}. Move or rename it before rerunning the task.");
+            return EpisodeOutcome.SkippedReservedSidecar;
         }
 
         var videoStream = GetVideoStream(episode);
         if (videoStream is null)
         {
-            _logger.LogDebug("Skipping {EpisodePath}: no video stream is available", mediaPath);
-            return;
+            runLog.Warning($"Skipping {mediaPath}: no video stream is available.");
+            return EpisodeOutcome.SkippedNoVideoStream;
         }
 
         var extractedFrames = new List<string>(FramePositions.Length);
@@ -221,7 +240,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    var frame = await ExtractFrame(episode, videoStream, position, cancellationToken).ConfigureAwait(false);
+                    var frame = await ExtractFrame(
+                        episode,
+                        videoStream,
+                        position,
+                        runLog,
+                        cancellationToken).ConfigureAwait(false);
                     if (File.Exists(frame))
                     {
                         extractedFrames.Add(frame);
@@ -233,24 +257,28 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "Frame extraction at {FramePercent:P0} failed for {EpisodePath}", position, mediaPath);
+                    runLog.Warning(
+                        $"Frame extraction at {position:P0} failed for {mediaPath}",
+                        ex);
                 }
             }
 
             if (extractedFrames.Count == 0)
             {
-                _logger.LogWarning("No usable frames could be extracted from {EpisodePath}", mediaPath);
-                return;
+                runLog.Warning($"No usable frames could be extracted from {mediaPath}.");
+                return EpisodeOutcome.FailedNoFrames;
             }
 
-            await WritePoster(extractedFrames, posterPath, cancellationToken).ConfigureAwait(false);
+            await WritePoster(extractedFrames, posterPath, runLog, cancellationToken).ConfigureAwait(false);
             var primaryPosterPath = await ActivatePoster(
                 episode,
                 mediaPath,
                 posterPath,
+                runLog,
                 cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Generated Witzi episode poster {PosterPath}", posterPath);
-            _logger.LogDebug("Installed Witzi Primary sidecar {PrimaryPosterPath}", primaryPosterPath);
+            runLog.Information($"Generated Witzi episode poster {posterPath}");
+            runLog.Debug($"Installed Witzi Primary sidecar {primaryPosterPath}");
+            return EpisodeOutcome.Generated;
         }
         finally
         {
@@ -261,15 +289,41 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         }
     }
 
-    private static bool CanProcess(Episode episode)
+    private static string? GetIneligibleReason(Episode episode)
     {
-        return episode.IsFileProtocol
-            && !episode.IsShortcut
-            && !episode.IsPlaceHolder
-            && episode.IsCompleteMedia
-            && episode.VideoType != VideoType.Dvd
-            && !string.IsNullOrWhiteSpace(episode.Path)
-            && File.Exists(episode.Path);
+        if (!episode.IsFileProtocol)
+        {
+            return "the media does not use Jellyfin's local file protocol";
+        }
+
+        if (episode.IsShortcut)
+        {
+            return "the episode is a shortcut";
+        }
+
+        if (episode.IsPlaceHolder)
+        {
+            return "the episode is a placeholder";
+        }
+
+        if (!episode.IsCompleteMedia)
+        {
+            return "the episode is an active or incomplete recording";
+        }
+
+        if (episode.VideoType == VideoType.Dvd)
+        {
+            return "DVD media is not supported";
+        }
+
+        if (string.IsNullOrWhiteSpace(episode.Path))
+        {
+            return "the episode has no media path";
+        }
+
+        return File.Exists(episode.Path)
+            ? null
+            : "the media file does not exist from the Jellyfin server's perspective";
     }
 
     private string? FindExistingWitziPoster(Episode episode, string mediaPath)
@@ -348,6 +402,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         Episode episode,
         string mediaPath,
         string witziPosterPath,
+        PosterRunLog runLog,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -361,7 +416,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 continue;
             }
 
-            PreserveOriginalSidecar(sidecarPath);
+            PreserveOriginalSidecar(sidecarPath, runLog);
         }
 
         if (!PathsEqual(witziPosterPath, primaryPosterPath))
@@ -429,7 +484,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         return sidecars;
     }
 
-    private void PreserveOriginalSidecar(string path)
+    private static void PreserveOriginalSidecar(string path, PosterRunLog runLog)
     {
         var directory = Path.GetDirectoryName(path)!;
         var name = Path.GetFileNameWithoutExtension(path);
@@ -444,10 +499,8 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         }
 
         File.Move(path, backupPath, false);
-        _logger.LogInformation(
-            "Preserved previous episode Primary sidecar {OriginalPath} at {BackupPath}",
-            path,
-            backupPath);
+        runLog.Information(
+            $"Preserved previous episode Primary sidecar {path} at {backupPath}");
     }
 
     private static void CopyPosterAtomically(string sourcePath, string destinationPath)
@@ -584,6 +637,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         Episode episode,
         MediaStream videoStream,
         double position,
+        PosterRunLog runLog,
         CancellationToken cancellationToken)
     {
         var offset = episode.RunTimeTicks is > 0
@@ -594,6 +648,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             episode,
             videoStream,
             offset,
+            runLog,
             cancellationToken).ConfigureAwait(false);
         if (hardwareFrame is not null)
         {
@@ -621,6 +676,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         Episode episode,
         MediaStream videoStream,
         TimeSpan offset,
+        PosterRunLog runLog,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_mediaEncoder.EncoderPath))
@@ -655,16 +711,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             var result = await RunFfmpeg(startInfo, cancellationToken).ConfigureAwait(false);
             if (result.ExitCode == 0 && File.Exists(outputPath))
             {
-                _logger.LogDebug(
-                    "Extracted a poster frame with FFmpeg hardware acceleration when available for {EpisodePath}",
-                    episode.Path);
+                runLog.Debug(
+                    $"Extracted a poster frame with FFmpeg hardware acceleration when available for {episode.Path}");
                 return outputPath;
             }
 
-            _logger.LogDebug(
-                "Hardware-accelerated frame extraction failed for {EpisodePath}; retrying with Jellyfin's software extraction. FFmpeg: {Error}",
-                episode.Path,
-                result.Error);
+            runLog.Debug(
+                $"Hardware-accelerated frame extraction failed for {episode.Path}; retrying with Jellyfin's software extraction. FFmpeg: {result.Error}");
         }
         catch (OperationCanceledException)
         {
@@ -673,17 +726,20 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(
-                ex,
-                "Hardware-accelerated frame extraction could not start for {EpisodePath}; retrying with Jellyfin's software extraction",
-                episode.Path);
+            runLog.Debug(
+                $"Hardware-accelerated frame extraction could not start for {episode.Path}; retrying with Jellyfin's software extraction",
+                ex);
         }
 
         TryDelete(outputPath);
         return null;
     }
 
-    private async Task WritePoster(IReadOnlyList<string> framePaths, string outputPath, CancellationToken cancellationToken)
+    private async Task WritePoster(
+        IReadOnlyList<string> framePaths,
+        string outputPath,
+        PosterRunLog runLog,
+        CancellationToken cancellationToken)
     {
         var temporaryPath = outputPath + ".witzi-" + Guid.NewGuid().ToString("N") + ".tmp.jpg";
 
@@ -722,10 +778,8 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 "[v3][p2]overlay=70:1045[v4];" +
                 $"[v4]drawbox=x=70:y=1045:w=860:h=370:color=0x{borderColors[2]}@0.96:t=7,format=yuvj420p[out]";
 
-            _logger.LogDebug(
-                "Using randomized Witzi border colors {BorderColors} for {PosterPath}",
-                string.Join(", ", borderColors),
-                outputPath);
+            runLog.Debug(
+                $"Using randomized Witzi border colors {string.Join(", ", borderColors)} for {outputPath}");
 
             startInfo.ArgumentList.Add("-filter_complex");
             startInfo.ArgumentList.Add(filter);
@@ -837,6 +891,100 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         {
             // Jellyfin's regular temp cleanup will catch an extracted frame that
             // could not be removed immediately.
+        }
+    }
+
+    private static string OutcomeLabel(EpisodeOutcome outcome)
+    {
+        return outcome switch
+        {
+            EpisodeOutcome.Generated => "generated",
+            EpisodeOutcome.ReactivatedExisting => "reactivated-existing",
+            EpisodeOutcome.AlreadyCurrent => "already-current",
+            EpisodeOutcome.SkippedIneligible => "skipped-ineligible",
+            EpisodeOutcome.SkippedReservedSidecar => "skipped-reserved-sidecar",
+            EpisodeOutcome.SkippedNoVideoStream => "skipped-no-video-stream",
+            EpisodeOutcome.FailedNoFrames => "failed-no-frames",
+            EpisodeOutcome.Failed => "failed",
+            _ => outcome.ToString()
+        };
+    }
+
+    private enum EpisodeOutcome
+    {
+        Generated,
+        ReactivatedExisting,
+        AlreadyCurrent,
+        SkippedIneligible,
+        SkippedReservedSidecar,
+        SkippedNoVideoStream,
+        FailedNoFrames,
+        Failed
+    }
+
+    private sealed class PosterRunLog : IDisposable
+    {
+        private const string LogFileName = "witzi-episode-posters.log";
+        private readonly object _syncRoot = new();
+        private readonly StreamWriter _writer;
+
+        private PosterRunLog(string filePath)
+        {
+            var stream = new FileStream(
+                filePath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.ReadWrite);
+            _writer = new StreamWriter(stream, new UTF8Encoding(false))
+            {
+                AutoFlush = true
+            };
+        }
+
+        public static PosterRunLog Create(string logDirectoryPath)
+        {
+            Directory.CreateDirectory(logDirectoryPath);
+            return new PosterRunLog(Path.Combine(logDirectoryPath, LogFileName));
+        }
+
+        public void Debug(string message, Exception? exception = null)
+        {
+            Write("DBG", message, exception);
+        }
+
+        public void Information(string message)
+        {
+            Write("INF", message);
+        }
+
+        public void Warning(string message, Exception? exception = null)
+        {
+            Write("WRN", message, exception);
+        }
+
+        public void Error(string message, Exception exception)
+        {
+            Write("ERR", message, exception);
+        }
+
+        public void Dispose()
+        {
+            lock (_syncRoot)
+            {
+                _writer.Dispose();
+            }
+        }
+
+        private void Write(string level, string message, Exception? exception = null)
+        {
+            lock (_syncRoot)
+            {
+                _writer.WriteLine($"{DateTimeOffset.UtcNow:O} [{level}] {message}");
+                if (exception is not null)
+                {
+                    _writer.WriteLine(exception);
+                }
+            }
         }
     }
 

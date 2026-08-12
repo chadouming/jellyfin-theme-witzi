@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "0.1.13.0",
+        "changelog": "Writes poster-generation diagnostics to a dedicated Witzi log with explicit per-episode skip and failure reasons plus a final outcome summary, keeping detailed FFmpeg and poster messages out of Jellyfin's main log.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.14/Witzi.Episode.Posters_0.1.13.0.zip",
+        "checksum": "aaea42f9f8198fc7060da8b541e252fe",
+        "timestamp": "2026-08-12T18:02:26Z"
+      },
+      {
         "version": "0.1.12.0",
         "changelog": "Keeps Witzi artwork selected after Jellyfin metadata refreshes by installing it under the provider-recognized episode Primary filename, while preserving conflicting local sidecars as recoverable backups and reusing existing Witzi output without rerunning FFmpeg.",
         "targetAbi": "12.0.0.0",
