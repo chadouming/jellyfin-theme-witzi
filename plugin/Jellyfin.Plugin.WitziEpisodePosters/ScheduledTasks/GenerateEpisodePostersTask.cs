@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -17,7 +18,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 
 /// <summary>
-/// Generates portrait sidecar images for episodes that do not already have poster artwork.
+/// Generates dedicated portrait sidecar images for episodes and registers them as Primary artwork.
 /// </summary>
 public sealed class GenerateEpisodePostersTask : IScheduledTask
 {
@@ -41,6 +42,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly IMediaEncoder _mediaEncoder;
     private readonly IImageProcessor _imageProcessor;
+    private readonly IServerConfigurationManager _serverConfigurationManager;
     private readonly ILogger<GenerateEpisodePostersTask> _logger;
 
     /// <summary>
@@ -51,12 +53,14 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         IMediaSourceManager mediaSourceManager,
         IMediaEncoder mediaEncoder,
         IImageProcessor imageProcessor,
+        IServerConfigurationManager serverConfigurationManager,
         ILogger<GenerateEpisodePostersTask> logger)
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
         _mediaEncoder = mediaEncoder;
         _imageProcessor = imageProcessor;
+        _serverConfigurationManager = serverConfigurationManager;
         _logger = logger;
     }
 
@@ -67,7 +71,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     public string Key => "GenerateWitziEpisodePosters";
 
     /// <inheritdoc />
-    public string Description => "Creates 2:3 episode posters from three representative video frames and stores them beside each media file.";
+    public string Description => "Creates dedicated 2:3 Witzi episode posters, reuses existing Witzi artwork, and registers it as the Primary image.";
 
     /// <inheritdoc />
     public string Category => "Library";
@@ -99,31 +103,51 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         }
 
         var completed = 0;
+        var progressLock = new object();
+        var configuredParallelLimit = _serverConfigurationManager.Configuration.ParallelImageEncodingLimit;
+        var maxConcurrentEpisodes = configuredParallelLimit > 0
+            ? configuredParallelLimit
+            : Environment.ProcessorCount;
+        var parallelOptions = new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = maxConcurrentEpisodes
+        };
+
+        _logger.LogInformation(
+            "Processing {EpisodeCount} episodes with up to {WorkerCount} concurrent Witzi poster workers",
+            episodeCount,
+            maxConcurrentEpisodes);
+
         for (var startIndex = 0; startIndex < episodeCount; startIndex += QueryPageSize)
         {
             query.StartIndex = startIndex;
             var episodes = _libraryManager.GetItemList(query).OfType<Episode>().ToArray();
 
-            foreach (var episode in episodes)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+            await Parallel.ForEachAsync(
+                episodes,
+                parallelOptions,
+                async (episode, episodeCancellationToken) =>
+                {
+                    try
+                    {
+                        await ProcessEpisode(episode, episodeCancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not generate a Witzi poster for {EpisodeName} at {EpisodePath}", episode.Name, episode.Path);
+                    }
 
-                try
-                {
-                    await ProcessEpisode(episode, cancellationToken).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Could not generate a Witzi poster for {EpisodeName} at {EpisodePath}", episode.Name, episode.Path);
-                }
-
-                completed++;
-                progress.Report(100d * completed / episodeCount);
-            }
+                    lock (progressLock)
+                    {
+                        completed++;
+                        progress.Report(100d * completed / episodeCount);
+                    }
+                }).ConfigureAwait(false);
         }
 
         progress.Report(100);
@@ -143,29 +167,37 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             return;
         }
 
-        // Jellyfin's EpisodeLocalImageProvider recognizes <video basename>.jpg
-        // as the episode's Primary image.
-        var posterPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + ".jpg");
+        // Keep Witzi's artwork separate from provider- or user-managed Primary
+        // sidecars. RegisterPoster makes this dedicated file the active Primary
+        // without deleting or overwriting the previous artwork.
+        var posterPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + "-witzi.jpg");
+        var existingPosterPath = FindExistingWitziPoster(episode, mediaPath);
 
-        if (File.Exists(posterPath))
+        if (existingPosterPath is not null)
         {
-            if (IsPortrait(posterPath))
+            if (IsCurrentPrimary(episode, existingPosterPath))
             {
-                await RegisterPoster(episode, posterPath, cancellationToken).ConfigureAwait(false);
+                _logger.LogDebug("Skipping {EpisodePath}: its Witzi poster is already Primary", mediaPath);
             }
             else
             {
-                _logger.LogWarning(
-                    "Leaving existing landscape sidecar untouched at {PosterPath}. Move or rename it before rerunning the task if Witzi should replace it.",
-                    posterPath);
+                await RegisterPoster(episode, existingPosterPath, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation(
+                    "Registered existing Witzi episode poster {PosterPath} as Primary for {EpisodePath}",
+                    existingPosterPath,
+                    mediaPath);
             }
 
             return;
         }
 
-        if (HasExistingPoster(episode, mediaPath))
+        if (File.Exists(posterPath))
         {
-            _logger.LogDebug("Skipping {EpisodePath}: an episode poster already exists", mediaPath);
+            // A file using Witzi's reserved name should never be overwritten,
+            // even if it is corrupt or was placed there by another process.
+            _logger.LogWarning(
+                "Leaving unrecognized Witzi sidecar untouched at {PosterPath}. Move or rename it before rerunning the task.",
+                posterPath);
             return;
         }
 
@@ -230,114 +262,112 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             && File.Exists(episode.Path);
     }
 
-    private bool HasExistingPoster(Episode episode, string mediaPath)
+    private string? FindExistingWitziPoster(Episode episode, string mediaPath)
     {
-        var image = episode.GetImageInfo(ImageType.Primary, 0);
-        if (image is not null)
+        var candidates = GetWitziPosterPaths(mediaPath).ToArray();
+        var primary = episode.GetImageInfo(ImageType.Primary, 0);
+        if (primary is not null
+            && candidates.Any(candidate => PathsEqual(primary.Path, candidate))
+            && File.Exists(primary.Path)
+            && HasExpectedDimensions(primary.Path))
         {
-            if (image.Width > 0 && image.Height > 0)
+            return primary.Path;
+        }
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate) && HasExpectedDimensions(candidate))
             {
-                if (image.Height > image.Width)
-                {
-                    return true;
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(image.Path) && File.Exists(image.Path))
-            {
-                try
-                {
-                    var dimensions = _imageProcessor.GetImageDimensions(image.Path);
-                    if (dimensions.Height > dimensions.Width)
-                    {
-                        return true;
-                    }
-                }
-                catch
-                {
-                    // An existing Primary image with unreadable dimensions is
-                    // preserved. Replacing user artwork is worse than skipping
-                    // one episode whose image cannot be classified.
-                    return true;
-                }
-            }
-            else if (image.Width <= 0 || image.Height <= 0)
-            {
-                // Remote and provider-managed Primary images do not always
-                // expose dimensions or a local path. Treat them as existing
-                // posters unless Jellyfin positively identifies a landscape
-                // image above.
-                return true;
+                return candidate;
             }
         }
 
-        return HasExistingPosterSidecar(mediaPath);
+        return FindLegacyWitziPoster(episode, mediaPath);
     }
 
-    private bool HasExistingPosterSidecar(string mediaPath)
+    private static IEnumerable<string> GetWitziPosterPaths(string mediaPath)
     {
         var directory = Path.GetDirectoryName(mediaPath);
         if (string.IsNullOrEmpty(directory))
         {
-            return false;
+            return [];
         }
 
         var mediaName = Path.GetFileNameWithoutExtension(mediaPath);
-        var thumbnailName = mediaName + "-thumb";
-        var searchDirectories = new[] { directory, Path.Combine(directory, "metadata") };
-
-        foreach (var searchDirectory in searchDirectories)
-        {
-            if (!Directory.Exists(searchDirectory))
-            {
-                continue;
-            }
-
-            string[] files;
-            try
-            {
-                files = Directory.GetFiles(searchDirectory);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _logger.LogDebug(ex, "Could not inspect episode artwork in {ArtworkDirectory}", searchDirectory);
-                continue;
-            }
-
-            foreach (var file in files)
-            {
-                if (!BaseItem.SupportedImageExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var candidateName = Path.GetFileNameWithoutExtension(file);
-                if (string.Equals(candidateName, mediaName, StringComparison.OrdinalIgnoreCase))
-                {
-                    // Jellyfin treats an exact media-basename image as the
-                    // episode Primary. It belongs to the user even if its
-                    // dimensions cannot be inspected, so never replace it.
-                    return true;
-                }
-
-                if (string.Equals(candidateName, thumbnailName, StringComparison.OrdinalIgnoreCase)
-                    && IsPortrait(file))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        var fileName = mediaName + "-witzi.jpg";
+        return
+        [
+            Path.Combine(directory, fileName),
+            Path.Combine(directory, "metadata", fileName)
+        ];
     }
 
-    private bool IsPortrait(string path)
+    private string? FindLegacyWitziPoster(Episode episode, string mediaPath)
+    {
+        var directory = Path.GetDirectoryName(mediaPath);
+        if (string.IsNullOrEmpty(directory))
+        {
+            return null;
+        }
+
+        var legacyPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + ".jpg");
+        var primary = episode.GetImageInfo(ImageType.Primary, 0);
+
+        // Releases through 0.1.10 used the generic <video basename>.jpg
+        // sidecar. Exact output dimensions plus the registered Primary path
+        // provide the only durable signature those versions left behind.
+        return primary is not null
+            && PathsEqual(primary.Path, legacyPath)
+            && File.Exists(legacyPath)
+            && HasExpectedDimensions(primary, legacyPath)
+                ? legacyPath
+                : null;
+    }
+
+    private static bool IsCurrentPrimary(Episode episode, string posterPath)
+    {
+        var primary = episode.GetImageInfo(ImageType.Primary, 0);
+        return primary is not null && PathsEqual(primary.Path, posterPath);
+    }
+
+    private bool HasExpectedDimensions(ItemImageInfo image, string path)
+    {
+        if (image.Width > 0 && image.Height > 0)
+        {
+            return image.Width == PosterWidth && image.Height == PosterHeight;
+        }
+
+        return HasExpectedDimensions(path);
+    }
+
+    private bool HasExpectedDimensions(string path)
     {
         try
         {
             var dimensions = _imageProcessor.GetImageDimensions(path);
-            return dimensions.Height > dimensions.Width;
+            return dimensions.Width == PosterWidth && dimensions.Height == PosterHeight;
         }
         catch
+        {
+            return false;
+        }
+    }
+
+    private static bool PathsEqual(string? first, string? second)
+    {
+        if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second))
+        {
+            return false;
+        }
+
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(first),
+                Path.GetFullPath(second),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             return false;
         }

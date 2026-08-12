@@ -1,30 +1,33 @@
 # Witzi Episode Posters plugin
 
-This Jellyfin 12 plugin creates a real 2:3 Primary image for episodes that only
-have Jellyfin's landscape Screen Grabber image. It uses Jellyfin's configured
-FFmpeg media encoder to sample frames at 18%, 50%, and 82%, then composes them
-locally into a Catppuccin Mocha/Witzi portrait poster. Frame extraction asks
-FFmpeg to select an available hardware decoder automatically and falls back to
+This Jellyfin 12 plugin creates a dedicated 2:3 Witzi poster for every episode
+that does not already have one. It uses Jellyfin's configured FFmpeg media
+encoder to sample frames at 18%, 50%, and 82%, then composes them locally into
+a Catppuccin Mocha/Witzi portrait poster. Frame extraction asks FFmpeg to
+select an available hardware decoder automatically and falls back to
 Jellyfin's regular software extraction if the GPU path cannot be used. Every
 new poster receives three distinct, randomly selected frame-border colors from
-the Witzi/Catppuccin palette.
+the Witzi/Catppuccin palette. The scheduled task uses Jellyfin's **Parallel
+image encoding limit** as its maximum number of concurrent episode workers. If
+that setting is empty, it follows Jellyfin's core-count-based default.
 
-The output is `<episode video basename>.jpg` beside the video. That filename is
-recognized as `ImageType.Primary` by Jellyfin 12's `EpisodeLocalImageProvider`,
-so native clients can use the image without the Witzi browser helper.
+The output is `<episode video basename>-witzi.jpg` beside the video and is
+registered as the episode's `ImageType.Primary`, so native clients can use it
+without the Witzi browser helper. A different previous Primary image is not
+deleted or overwritten; only Jellyfin's active Primary registration changes.
 
-Before starting FFmpeg, the plugin checks Jellyfin's registered Primary image
-and every episode-specific sidecar name supported by Jellyfin's local image
-provider. This includes the episode basename and `-thumb` variants, all
-supported image extensions, and both the media directory and its `metadata`
-subdirectory. Existing posters are never regenerated or overwritten; Primary
-images whose dimensions cannot be determined are preserved conservatively.
-Media folders must be writable by the Jellyfin server account.
+Before starting FFmpeg, the plugin checks for the dedicated Witzi file in both
+the media directory and its `metadata` subdirectory. If it is already Primary,
+the episode is skipped; if it exists but another image became Primary, the
+existing file is registered again without regenerating it. The plugin also
+recognizes a registered 1000 x 1500 `<episode video basename>.jpg` created by
+versions through 0.1.10. Reserved Witzi files are never overwritten. Media
+folders must be writable by the Jellyfin server account.
 
 After installation and a server restart, run **Dashboard -> Scheduled Tasks ->
 Library -> Generate Witzi episode posters**. The plugin does not create an
 automatic trigger; run the task manually whenever new episodes need posters.
-Existing poster sidecars are never overwritten, so their colors remain stable.
+Existing Witzi sidecars are never overwritten, so their colors remain stable.
 
 At server startup, the plugin also installs its embedded `witzi-posters.js`
 helper into Jellyfin Web. This makes the overview and item details live inside

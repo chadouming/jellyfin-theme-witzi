@@ -1022,7 +1022,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.doesNotMatch(helper, /witzi-(?:poster-pending|native-fallback|no-poster-card)/);
 });
 
-test('preserves existing episode posters before starting FFmpeg work', async () => {
+test('reuses Witzi episode posters and replaces a different Primary before starting FFmpeg work', async () => {
   const source = await readFile(
     new URL(
       '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/GenerateEpisodePostersTask.cs',
@@ -1037,12 +1037,22 @@ test('preserves existing episode posters before starting FFmpeg work', async () 
 
   assert.match(source, /IncludeItemTypes = \[BaseItemKind\.Episode\]/);
   assert.match(source, /GetItemList\(query\)\.OfType<Episode>\(\)/);
+  assert.match(source, /IServerConfigurationManager serverConfigurationManager/);
+  assert.match(source, /Configuration\.ParallelImageEncodingLimit/);
+  assert.match(source, /configuredParallelLimit > 0[\s\S]*\? configuredParallelLimit[\s\S]*: Environment\.ProcessorCount/);
+  assert.match(source, /MaxDegreeOfParallelism = maxConcurrentEpisodes/);
+  assert.match(source, /await Parallel\.ForEachAsync\(/);
+  assert.match(source, /lock \(progressLock\)/);
   assert.match(source, /private async Task ProcessEpisode\(Episode episode,/);
-  assert.ok(processEpisode.indexOf('File.Exists(posterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
-  assert.ok(processEpisode.indexOf('HasExistingPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
-  assert.match(source, /BaseItem\.SupportedImageExtensions\.Contains\(/);
-  assert.match(source, /new\[\] \{ directory, Path\.Combine\(directory, "metadata"\) \}/);
-  assert.match(source, /var thumbnailName = mediaName \+ "-thumb";/);
+  assert.ok(processEpisode.indexOf('FindExistingWitziPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
+  assert.ok(processEpisode.indexOf('IsCurrentPrimary(episode, existingPosterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
+  assert.ok(processEpisode.indexOf('RegisterPoster(episode, existingPosterPath') < processEpisode.indexOf('GetVideoStream(episode)'));
+  assert.match(source, /Path\.GetFileNameWithoutExtension\(mediaPath\) \+ "-witzi\.jpg"/);
+  assert.match(source, /private static IEnumerable<string> GetWitziPosterPaths\(string mediaPath\)/);
+  assert.match(source, /Path\.Combine\(directory, "metadata", fileName\)/);
+  assert.match(source, /private string\? FindLegacyWitziPoster\(Episode episode, string mediaPath\)/);
+  assert.match(source, /image\.Width == PosterWidth && image\.Height == PosterHeight/);
+  assert.doesNotMatch(source, /HasExistingPoster(?:Sidecar)?\(/);
   assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
 });
 
