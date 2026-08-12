@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "0.1.13.0"
+version: "0.1.14.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,6 +17,6 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Writes poster-generation diagnostics to a dedicated Witzi log with explicit
-  per-episode skip and failure reasons plus a final outcome summary, keeping
-  detailed FFmpeg and poster messages out of Jellyfin's main log.
+  Caps poster generation at four concurrent episode workers regardless of the
+  server image-encoding setting, preventing large AV1 batches from exhausting
+  available memory or process threads.

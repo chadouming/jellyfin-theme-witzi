@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Common.Configuration;
-using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -26,6 +25,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private const int QueryPageSize = 100;
     private const int PosterWidth = 1000;
     private const int PosterHeight = 1500;
+    private const int MaxConcurrentEpisodes = 4;
     private static readonly double[] FramePositions = [0.18d, 0.50d, 0.82d];
     private static readonly string[] BorderColorPalette =
     [
@@ -43,7 +43,6 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private readonly IMediaSourceManager _mediaSourceManager;
     private readonly IMediaEncoder _mediaEncoder;
     private readonly IImageProcessor _imageProcessor;
-    private readonly IServerConfigurationManager _serverConfigurationManager;
     private readonly IApplicationPaths _applicationPaths;
 
     /// <summary>
@@ -54,14 +53,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         IMediaSourceManager mediaSourceManager,
         IMediaEncoder mediaEncoder,
         IImageProcessor imageProcessor,
-        IServerConfigurationManager serverConfigurationManager,
         IApplicationPaths applicationPaths)
     {
         _libraryManager = libraryManager;
         _mediaSourceManager = mediaSourceManager;
         _mediaEncoder = mediaEncoder;
         _imageProcessor = imageProcessor;
-        _serverConfigurationManager = serverConfigurationManager;
         _applicationPaths = applicationPaths;
     }
 
@@ -109,18 +106,14 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         var completed = 0;
         var outcomeCounts = new int[Enum.GetValues<EpisodeOutcome>().Length];
         var progressLock = new object();
-        var configuredParallelLimit = _serverConfigurationManager.Configuration.ParallelImageEncodingLimit;
-        var maxConcurrentEpisodes = configuredParallelLimit > 0
-            ? configuredParallelLimit
-            : Environment.ProcessorCount;
         var parallelOptions = new ParallelOptions
         {
             CancellationToken = cancellationToken,
-            MaxDegreeOfParallelism = maxConcurrentEpisodes
+            MaxDegreeOfParallelism = MaxConcurrentEpisodes
         };
 
         runLog.Information(
-            $"Using up to {maxConcurrentEpisodes} concurrent episode workers.");
+            $"Using up to {MaxConcurrentEpisodes} concurrent episode workers.");
 
         for (var startIndex = 0; startIndex < episodeCount; startIndex += QueryPageSize)
         {

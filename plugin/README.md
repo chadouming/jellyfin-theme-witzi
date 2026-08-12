@@ -7,9 +7,9 @@ a Catppuccin Mocha/Witzi portrait poster. Frame extraction asks FFmpeg to
 select an available hardware decoder automatically and falls back to
 Jellyfin's regular software extraction if the GPU path cannot be used. Every
 new poster receives three distinct, randomly selected frame-border colors from
-the Witzi/Catppuccin palette. The scheduled task uses Jellyfin's **Parallel
-image encoding limit** as its maximum number of concurrent episode workers. If
-that setting is empty, it follows Jellyfin's core-count-based default.
+the Witzi/Catppuccin palette. The scheduled task always uses at most four
+concurrent episode workers, regardless of Jellyfin's **Parallel image encoding
+limit**, to avoid exhausting memory or process threads during large AV1 runs.
 
 The reusable output is `<episode video basename>-witzi.jpg` beside the video.
 The task also installs an identical copy as `<episode video basename>.jpg`, the

@@ -1033,11 +1033,10 @@ test('reuses Witzi episode posters and writes task diagnostics to a dedicated lo
 
   assert.match(source, /IncludeItemTypes = \[BaseItemKind\.Episode\]/);
   assert.match(source, /GetItemList\(query\)\.OfType<Episode>\(\)/);
-  assert.match(source, /IServerConfigurationManager serverConfigurationManager/);
   assert.match(source, /IApplicationPaths applicationPaths/);
-  assert.match(source, /Configuration\.ParallelImageEncodingLimit/);
-  assert.match(source, /configuredParallelLimit > 0[\s\S]*\? configuredParallelLimit[\s\S]*: Environment\.ProcessorCount/);
-  assert.match(source, /MaxDegreeOfParallelism = maxConcurrentEpisodes/);
+  assert.match(source, /private const int MaxConcurrentEpisodes = 4;/);
+  assert.match(source, /MaxDegreeOfParallelism = MaxConcurrentEpisodes/);
+  assert.doesNotMatch(source, /ParallelImageEncodingLimit|Environment\.ProcessorCount/);
   assert.match(source, /await Parallel\.ForEachAsync\(/);
   assert.match(source, /lock \(progressLock\)/);
   assert.match(source, /private async Task<EpisodeOutcome> ProcessEpisode\(/);
