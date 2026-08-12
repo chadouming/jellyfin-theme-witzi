@@ -64,9 +64,9 @@ Jellyfin supplies those two rows as landscape cards, so CSS alone cannot ask the
 
 The browser helper selects:
 
-- an episode's own portrait Primary poster, then the series poster, then its season/parent poster;
+- an episode's own portrait Primary poster, without substituting series, season, or parent artwork;
 - the item's own portrait Primary poster for a movie; or
-- Jellyfin's native artwork, contained without cropping, only when every poster candidate fails to load.
+- Jellyfin's native artwork, contained without cropping, when the item's own Primary fails to load.
 
 The rows always use the same portrait geometry as Recently Added. The helper detects episodes from both API metadata and Jellyfin's card markup, verifies each candidate in the browser before swapping artwork, retries incomplete poster metadata, and rejects landscape Primary images. Native artwork stays visible until a poster has loaded, so failed lookups never produce empty cards.
 

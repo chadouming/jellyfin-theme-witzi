@@ -132,7 +132,7 @@ test('waits for Jellyfin to load Custom CSS before starting the helper', async (
   assert.equal(observerCount, 1);
 });
 
-test('uses loadable posters and retains native artwork when candidates fail', async () => {
+test('uses only each item own loadable Primary and never overlays inherited artwork', async () => {
   const cards = [
     createCard('episode-inherited', 'Episode'),
     createCard('episode-own-portrait', 'Episode'),
@@ -225,7 +225,7 @@ test('uses loadable posters and retains native artwork when candidates fail', as
     Image: class {
       set src(url) {
         imageRequests.push(url);
-        const isLoadable = /\/Items\/(series-1|episode-own-portrait|season-2|series-3|movie)\/Images\/Primary/.test(url);
+        const isLoadable = /\/Items\/(episode-own-portrait|movie)\/Images\/Primary/.test(url);
         setTimeout(() => (isLoadable ? this.onload?.() : this.onerror?.()), 0);
       }
     },
@@ -261,34 +261,30 @@ test('uses loadable posters and retains native artwork when candidates fail', as
   assert.equal(helperStatus, 'active');
   assert.equal(calls.length, 1);
   assert.match(calls[0], /episode-inherited/);
-  assert.equal(imageRequests.some((url) => url.includes('/Items/series-without-poster/Images/Primary')), true);
-  assert.equal(imageRequests.some((url) => url.includes('/Items/season-2/Images/Primary')), true);
+  assert.equal(imageRequests.some((url) => /\/Items\/(?:series|season)-/.test(url)), false);
 
-  for (const card of cards.slice(0, 5)) {
+  for (const card of [cards[1], cards[4]]) {
     assert.equal(card.dataset.witziArtwork, 'poster');
     assert.equal(card.classList.contains('witzi-poster-card'), true);
     assert.match(card.image.getAttribute('data-src'), /\/Images\/Primary/);
   }
 
-  assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
   assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/episode-own-portrait\/Images\/Primary/);
-  assert.match(cards[2].image.getAttribute('data-src'), /\/Items\/season-2\/Images\/Primary/);
-  assert.match(cards[3].image.getAttribute('data-src'), /\/Items\/series-3\/Images\/Primary/);
   assert.match(cards[4].image.getAttribute('data-src'), /\/Items\/movie\/Images\/Primary/);
 
-  for (const fallback of cards.slice(5)) {
+  for (const fallback of [cards[0], cards[2], cards[3], cards[5], cards[6]]) {
     assert.equal(fallback.dataset.witziArtwork, 'fallback');
     assert.equal(fallback.classList.contains('witzi-poster-card'), false);
     assert.match(fallback.image.getAttribute('data-src'), /\/Images\/Backdrop/);
     assert.match(fallback.image.style.backgroundImage, /\/Images\/Backdrop/);
   }
 
-  cards[0].image.setAttribute('data-src', 'https://jellyfin.test/Items/episode-inherited/Images/Backdrop');
-  cards[0].image.style.backgroundImage = 'url("https://jellyfin.test/Items/episode-inherited/Images/Backdrop")';
+  cards[1].image.setAttribute('data-src', 'https://jellyfin.test/Items/episode-own-portrait/Images/Backdrop');
+  cards[1].image.style.backgroundImage = 'url("https://jellyfin.test/Items/episode-own-portrait/Images/Backdrop")';
   observerCallback();
   await new Promise((resolve) => setTimeout(resolve, 10));
 
-  assert.match(cards[0].image.getAttribute('data-src'), /\/Items\/series-1\/Images\/Primary/);
+  assert.match(cards[1].image.getAttribute('data-src'), /\/Items\/episode-own-portrait\/Images\/Primary/);
   assert.equal(calls.length, 1);
 });
 
