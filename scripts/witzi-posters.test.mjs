@@ -1270,7 +1270,14 @@ test('keeps a current injected helper in place around other plugin scripts', asy
   assert.doesNotMatch(source, /Regex\.Replace\(current, markerPattern, string\.Empty/);
   // Jellyfin Web cannot start without index.html, so it is staged and renamed
   // rather than truncated in place by a write that dies partway through.
-  assert.match(source, /await WriteIndexAtomically\(indexPath, document, cancellationToken\)/);
+  assert.match(source, /await WriteIndex\(indexPath, document, cancellationToken\)/);
   assert.match(source, /File\.Move\(temporaryPath, indexPath, true\);/);
-  assert.doesNotMatch(source, /File\.WriteAllTextAsync\(indexPath/);
+  // Staging needs write access to the directory; rewriting in place needs it
+  // only on index.html. Images grant the second without the first, so a
+  // refused staging file must fall back instead of skipping the install.
+  assert.match(source, /catch \(UnauthorizedAccessException ex\)/);
+  assert.match(source, /await File\.WriteAllTextAsync\(indexPath, content, cancellationToken\)/);
+  // A full disk surfaces as IOException, and rewriting in place after one is
+  // how index.html gets truncated, so that must not reach the fallback.
+  assert.doesNotMatch(source, /catch \(Exception ex\) when \(ex is UnauthorizedAccessException or IOException\)[\s\S]{0,400}WriteAllTextAsync\(indexPath/);
 });

@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "1.1.19.0",
+        "changelog": "Fixes the helper failing to install on servers whose Jellyfin Web directory does not allow new files. Since 1.1.17.0 the index.html replacement was staged as a temporary file beside the target, which needs write access to the directory, while the previous in-place write only needed it on index.html. Staging is still preferred because it cannot leave a truncated web client behind, but a refused staging file now falls back to writing in place and logs a warning.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.19/Witzi.Episode.Posters_1.1.19.0.zip",
+        "checksum": "4edbd70248d65682ffa703dce3d4e3f4",
+        "timestamp": "2026-08-18T22:48:43Z"
+      },
+      {
         "version": "1.1.18.0",
         "changelog": "Builds against the Jellyfin 12.0 RC5 packages; the plugin ABI is unchanged at 12.0.0.0. Newly generated posters now appear without reloading the page, because the browser helper subscribes to the websocket messages Jellyfin already sends and drops only the affected items from its cache when the server reports them changed.",
         "targetAbi": "12.0.0.0",

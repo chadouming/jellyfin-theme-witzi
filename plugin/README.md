@@ -58,8 +58,13 @@ depending on the JavaScript Injector plugin. JavaScript is required because CSS
 cannot move live DOM nodes, replace episode image requests, or coordinate
 cached backdrop transitions, and the separate injector targets Jellyfin 10.11
 rather than this plugin's Jellyfin 12 ABI. The Jellyfin service needs write
-access to the web client's `index.html`; if the web directory is read-only, the
-startup task logs an error and the helper can still be installed manually.
+access to the web client's `index.html`. The replacement is staged beside the
+target and renamed where the directory allows new files, because that cannot
+leave a truncated web client behind if the write is interrupted. Where the
+directory refuses new files, which several container images do, the task warns
+and rewrites `index.html` in place instead. If `index.html` itself is not
+writable, the startup task logs an error and the helper can still be installed
+manually.
 
 The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC5
 packages. It is not loadable by Jellyfin 10.x.

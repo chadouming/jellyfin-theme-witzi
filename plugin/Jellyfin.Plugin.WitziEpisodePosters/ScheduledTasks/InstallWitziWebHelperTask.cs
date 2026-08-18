@@ -112,7 +112,7 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
                 return;
             }
 
-            await WriteIndexAtomically(indexPath, document, cancellationToken).ConfigureAwait(false);
+            await WriteIndex(indexPath, document, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("Installed the Witzi pre-paint layer and browser helper into {Path}.", indexPath);
         }
         catch (UnauthorizedAccessException ex)
@@ -188,12 +188,16 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
         return true;
     }
 
-    // Jellyfin Web cannot start without index.html, so it is never written in
-    // place. A crash, container stop, or full disk partway through a direct
-    // write would leave the web client truncated with no copy of the original
-    // left to restore. Staging beside the target keeps the rename on one
-    // volume so it stays atomic.
-    private static async Task WriteIndexAtomically(
+    // Jellyfin Web cannot start without index.html, so it is replaced through a
+    // staged file and a rename where that is possible: a crash, container stop,
+    // or full disk partway through a direct write would otherwise leave the web
+    // client truncated with no copy of the original left to restore.
+    //
+    // Staging needs write access to the directory, while rewriting the file in
+    // place only needs write access to index.html itself. Container images
+    // regularly grant the second and not the first, so a refused staging file
+    // falls back rather than leaving the helper uninstalled.
+    private async Task WriteIndex(
         string indexPath,
         string content,
         CancellationToken cancellationToken)
@@ -208,6 +212,17 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
         {
             await File.WriteAllTextAsync(temporaryPath, content, cancellationToken).ConfigureAwait(false);
             File.Move(temporaryPath, indexPath, true);
+            return;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // Only a permission refusal falls back. A full disk or I/O failure
+            // surfaces as IOException, and rewriting in place after one of those
+            // is how index.html gets truncated, so those keep propagating.
+            _logger.LogWarning(
+                ex,
+                "Could not stage a replacement beside {Path}, so it will be rewritten in place. An interrupted write cannot be rolled back; grant the Jellyfin service write access to that directory to restore the safe path.",
+                indexPath);
         }
         finally
         {
@@ -224,5 +239,7 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
                 // masking the original failure with a cleanup error.
             }
         }
+
+        await File.WriteAllTextAsync(indexPath, content, cancellationToken).ConfigureAwait(false);
     }
 }
