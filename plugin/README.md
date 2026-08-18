@@ -11,6 +11,11 @@ the Witzi/Catppuccin palette. The scheduled task always uses at most four
 concurrent episode workers, regardless of Jellyfin's **Parallel image encoding
 limit**, to avoid exhausting memory or process threads during large AV1 runs.
 
+Each run collects the full episode-id list once and then works through it, so
+registering artwork cannot reorder rows out from under a partially completed
+pass. Episodes that share one multi-episode video file also share one poster,
+which is built once and registered for each of them.
+
 The reusable output is `<episode video basename>-witzi.jpg` beside the video.
 The task also installs an identical copy as `<episode video basename>.jpg`, the
 episode Primary filename Jellyfin recognizes after later metadata refreshes.

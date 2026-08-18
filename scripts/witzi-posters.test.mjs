@@ -1018,7 +1018,7 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.doesNotMatch(helper, /witzi-(?:poster-pending|native-fallback|no-poster-card)/);
 });
 
-test('reuses Witzi episode posters and writes task diagnostics to a dedicated log', async () => {
+test('covers every episode once and writes task diagnostics to a dedicated log', async () => {
   const source = await readFile(
     new URL(
       '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/GenerateEpisodePostersTask.cs',
@@ -1032,7 +1032,11 @@ test('reuses Witzi episode posters and writes task diagnostics to a dedicated lo
   );
 
   assert.match(source, /IncludeItemTypes = \[BaseItemKind\.Episode\]/);
-  assert.match(source, /GetItemList\(query\)\.OfType<Episode>\(\)/);
+  // One unpaged id snapshot. A StartIndex walk over an unsorted item query can
+  // skip episodes once registering artwork rewrites the rows being paged.
+  assert.match(source, /_libraryManager\.GetItemIds\(query\)/);
+  assert.match(source, /_libraryManager\.GetItemById<Episode>\(episodeId\)/);
+  assert.doesNotMatch(source, /query\.StartIndex|QueryPageSize|GetCount\(query\)/);
   assert.match(source, /IApplicationPaths applicationPaths/);
   assert.match(source, /private const int MaxConcurrentEpisodes = 4;/);
   assert.match(source, /MaxDegreeOfParallelism = MaxConcurrentEpisodes/);
@@ -1040,6 +1044,11 @@ test('reuses Witzi episode posters and writes task diagnostics to a dedicated lo
   assert.match(source, /await Parallel\.ForEachAsync\(/);
   assert.match(source, /lock \(progressLock\)/);
   assert.match(source, /private async Task<EpisodeOutcome> ProcessEpisode\(/);
+  // Multi-episode files share one video, so one poster path is built once and
+  // reused rather than raced over by concurrent workers.
+  assert.match(source, /posterGates\.GetOrAdd\(NormalizePath\(posterPath\)/);
+  assert.match(source, /await gate\.WaitAsync\(cancellationToken\)/);
+  assert.match(source, /gate\.Release\(\);/);
   assert.ok(processEpisode.indexOf('FindExistingWitziPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('ActivatePoster(') < processEpisode.indexOf('GetVideoStream(episode)'));

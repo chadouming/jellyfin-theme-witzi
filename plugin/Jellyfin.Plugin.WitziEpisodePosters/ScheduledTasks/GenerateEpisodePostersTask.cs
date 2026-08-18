@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
@@ -22,7 +23,6 @@ namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 /// </summary>
 public sealed class GenerateEpisodePostersTask : IScheduledTask
 {
-    private const int QueryPageSize = 100;
     private const int PosterWidth = 1000;
     private const int PosterHeight = 1500;
     private const int MaxConcurrentEpisodes = 4;
@@ -90,11 +90,15 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             SourceTypes = [SourceType.Library],
             IsVirtualItem = false,
             IsFolder = false,
-            Recursive = true,
-            Limit = QueryPageSize
+            Recursive = true
         };
 
-        var episodeCount = _libraryManager.GetCount(query);
+        // Take one unpaged id snapshot. An unsorted Jellyfin item query carries
+        // no ORDER BY, so a StartIndex walk is only as stable as the storage
+        // order. Registering artwork rewrites the very rows being paged, which
+        // can shift episodes across an offset boundary and skip them entirely.
+        var episodeIds = _libraryManager.GetItemIds(query);
+        var episodeCount = episodeIds.Count;
         runLog.Information($"Starting Witzi poster generation for {episodeCount} episodes.");
         if (episodeCount == 0)
         {
@@ -106,6 +110,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         var completed = 0;
         var outcomeCounts = new int[Enum.GetValues<EpisodeOutcome>().Length];
         var progressLock = new object();
+        var posterGates = new ConcurrentDictionary<string, SemaphoreSlim>(StringComparer.OrdinalIgnoreCase);
         var parallelOptions = new ParallelOptions
         {
             CancellationToken = cancellationToken,
@@ -115,34 +120,42 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         runLog.Information(
             $"Using up to {MaxConcurrentEpisodes} concurrent episode workers.");
 
-        for (var startIndex = 0; startIndex < episodeCount; startIndex += QueryPageSize)
+        try
         {
-            query.StartIndex = startIndex;
-            var episodes = _libraryManager.GetItemList(query).OfType<Episode>().ToArray();
-
             await Parallel.ForEachAsync(
-                episodes,
+                episodeIds,
                 parallelOptions,
-                async (episode, episodeCancellationToken) =>
+                async (episodeId, episodeCancellationToken) =>
                 {
+                    var episode = _libraryManager.GetItemById<Episode>(episodeId);
                     EpisodeOutcome outcome;
-                    try
+                    if (episode is null)
                     {
-                        outcome = await ProcessEpisode(
-                            episode,
-                            runLog,
-                            episodeCancellationToken).ConfigureAwait(false);
+                        runLog.Warning(
+                            $"Skipping {episodeId:N}: the episode left the library after the run started.");
+                        outcome = EpisodeOutcome.SkippedIneligible;
                     }
-                    catch (OperationCanceledException)
+                    else
                     {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        outcome = EpisodeOutcome.Failed;
-                        runLog.Error(
-                            $"Could not generate a Witzi poster for {episode.Name} at {episode.Path}",
-                            ex);
+                        try
+                        {
+                            outcome = await ProcessEpisode(
+                                episode,
+                                runLog,
+                                posterGates,
+                                episodeCancellationToken).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            outcome = EpisodeOutcome.Failed;
+                            runLog.Error(
+                                $"Could not generate a Witzi poster for {episode.Name} at {episode.Path}",
+                                ex);
+                        }
                     }
 
                     Interlocked.Increment(ref outcomeCounts[(int)outcome]);
@@ -152,6 +165,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                         progress.Report(100d * completed / episodeCount);
                     }
                 }).ConfigureAwait(false);
+        }
+        finally
+        {
+            foreach (var gate in posterGates.Values)
+            {
+                gate.Dispose();
+            }
         }
 
         runLog.Information(
@@ -166,6 +186,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private async Task<EpisodeOutcome> ProcessEpisode(
         Episode episode,
         PosterRunLog runLog,
+        ConcurrentDictionary<string, SemaphoreSlim> posterGates,
         CancellationToken cancellationToken)
     {
         var ineligibleReason = GetIneligibleReason(episode);
@@ -188,6 +209,34 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         // Jellyfin's episode local-image provider only persists basename and
         // -thumb sidecars across metadata refreshes.
         var posterPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + "-witzi.jpg");
+
+        // A multi-episode file gives several episodes one video and therefore
+        // one poster path. Concurrent workers would each compose the poster and
+        // all but one would fail installing it, so hold the path while working.
+        var gate = posterGates.GetOrAdd(NormalizePath(posterPath), _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await ProcessEligibleEpisode(
+                episode,
+                mediaPath,
+                posterPath,
+                runLog,
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<EpisodeOutcome> ProcessEligibleEpisode(
+        Episode episode,
+        string mediaPath,
+        string posterPath,
+        PosterRunLog runLog,
+        CancellationToken cancellationToken)
+    {
         var existingPosterPath = FindExistingWitziPoster(episode, mediaPath);
 
         if (existingPosterPath is not null)
@@ -603,6 +652,18 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             return false;
+        }
+    }
+
+    private static string NormalizePath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return path;
         }
     }
 

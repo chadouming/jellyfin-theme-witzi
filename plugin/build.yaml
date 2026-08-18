@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "0.1.14.0"
+version: "0.1.15.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,6 +17,8 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Caps poster generation at four concurrent episode workers regardless of the
-  server image-encoding setting, preventing large AV1 batches from exhausting
-  available memory or process threads.
+  Gives every library episode a poster. The scheduled task now walks one
+  unpaged episode-id snapshot instead of re-querying by offset, so episodes can
+  no longer be skipped when registering artwork reorders the rows still being
+  paged, and episodes that share a multi-episode video file build their poster
+  once instead of racing for it.

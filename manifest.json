@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "0.1.15.0",
+        "changelog": "Gives every library episode a poster. The scheduled task walks one unpaged episode-id snapshot instead of re-querying by offset, so episodes are no longer skipped when registering artwork reorders the rows still being paged, and episodes that share a multi-episode video file build their poster once instead of racing for it.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.16/Witzi.Episode.Posters_0.1.15.0.zip",
+        "checksum": "d981a1787fac022c4489d658b79ce04e",
+        "timestamp": "2026-08-18T18:16:30Z"
+      },
+      {
         "version": "0.1.14.0",
         "changelog": "Caps poster generation at four concurrent episode workers regardless of the server image-encoding setting, preventing large AV1 batches from exhausting available memory or process threads.",
         "targetAbi": "12.0.0.0",
