@@ -715,6 +715,88 @@ test('ignores unrelated mutation churn and scopes DOM scans to affected features
   assert.deepEqual(counts, { backdrops: 1, cards: 2, details: 1, playback: 1 });
 });
 
+test('defers card and backdrop work while video is playing', async () => {
+  const counts = { backdrops: 0, cards: 0, playback: 0 };
+  let observerCallback;
+  let playing = false;
+  const cardScope = '.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]';
+  const context = {
+    console,
+    document: {
+      readyState: 'complete',
+      documentElement: { removeAttribute() {}, setAttribute() {} },
+      querySelector(selector) {
+        if (selector === '.backdropContainer') counts.backdrops += 1;
+        if (selector === '.videoPlayerContainer') {
+          counts.playback += 1;
+          return playing ? {} : null;
+        }
+        return null;
+      },
+      querySelectorAll(selector) {
+        if (selector === `${cardScope} .card[data-id]`) counts.cards += 1;
+        return [];
+      },
+      addEventListener() {}
+    },
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() {}
+    },
+    setTimeout,
+    clearTimeout
+  };
+  context.window = {
+    addEventListener() {},
+    clearTimeout,
+    requestAnimationFrame: (callback) => setTimeout(callback, 0),
+    setTimeout: unrefTimeout
+  };
+
+  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  Object.keys(counts).forEach((key) => { counts[key] = 0; });
+
+  const unrelated = { closest() { return null; }, matches() { return false; }, querySelector() { return null; } };
+  const videoNode = {
+    matches(selector) { return selector === '.videoPlayerContainer'; },
+    querySelector() { return null; }
+  };
+  const playbackMutation = () => observerCallback([{
+    type: 'childList',
+    target: unrelated,
+    addedNodes: [videoNode],
+    removedNodes: []
+  }]);
+  const cardMutation = () => observerCallback([{
+    type: 'attributes',
+    attributeName: 'data-src',
+    target: {
+      closest(selector) { return selector === cardScope ? {} : null; },
+      matches(selector) { return selector === '.cardImageContainer'; }
+    }
+  }]);
+
+  playing = true;
+  playbackMutation();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  // Card artwork is hidden behind the player, and playback is when the browser
+  // can least afford the lookups.
+  cardMutation();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(counts.cards, 0);
+  assert.equal(counts.backdrops, 0);
+
+  // Leaving playback has to pick up the work that was skipped meanwhile.
+  playing = false;
+  playbackMutation();
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(counts.cards, 1);
+  assert.equal(counts.backdrops, 1);
+});
+
 test('keeps portrait rows, joins the right toolbar, and reveals backdrops', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
 
@@ -1066,6 +1148,17 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   assert.match(source, /image\.Width == PosterWidth && image\.Height == PosterHeight/);
   assert.doesNotMatch(source, /HasExistingPoster(?:Sidecar)?\(/);
   assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
+  // A short read is not a difference. Treating it as one sent intact posters
+  // through sidecar preservation, which renamed a backup copy on every run.
+  assert.match(source, /first\.ReadAtLeast\(firstBuffer, firstBuffer\.Length, false\)/);
+  assert.match(source, /second\.ReadAtLeast\(secondBuffer, secondBuffer\.Length, false\)/);
+  assert.doesNotMatch(source, /first\.Read\(firstBuffer\)|second\.Read\(secondBuffer\)/);
+  // Probing fixed names keeps sidecar lookup off a per-episode directory scan.
+  assert.doesNotMatch(source, /Directory\.GetFiles\(/);
+  assert.match(source, /foreach \(var extension in PrimarySidecarExtensions\)/);
+  // An untouched Primary is confirmed by metadata instead of a full re-read.
+  assert.match(source, /IsUnmodifiedSinceRegistration\(primaryPosterPath, witziPosterPath, primary\)/);
+  assert.match(source, /AutoFlush = false/);
   assert.match(source, /LogFileName = "witzi-episode-posters\.log"/);
   assert.match(source, /PosterRunLog\.Create\(_applicationPaths\.LogDirectoryPath\)/);
   assert.match(source, /FileMode\.Create/);
@@ -1085,8 +1178,20 @@ test('keeps a current injected helper in place around other plugin scripts', asy
   assert.match(source, /private static readonly Regex HelperBlockPattern/);
   assert.match(source, /existingBlocks\.Count == 1/);
   assert.match(source, /string\.Equals\(existingBlocks\[0\]\.Value, injection, StringComparison\.Ordinal\)/);
-  assert.match(source, /HelperBlockPattern\.Replace\(/);
+  assert.match(source, /blockPattern\.Replace\(/);
   assert.match(source, /if \(replacementWritten\)/);
+  // The pre-paint rules only work ahead of Jellyfin's first render, so they
+  // go in head. Custom CSS arrives long after a detail page has assembled.
+  assert.match(source, /private static readonly Regex CriticalBlockPattern/);
+  assert.match(source, /TryApplyBlock\(ref document, CriticalBlockPattern, criticalInjection, "<\/head>", indexPath\)/);
+  assert.match(source, /TryApplyBlock\(ref document, HelperBlockPattern, injection, "<\/body>", indexPath\)/);
+  assert.match(source, /Web\.witzi-critical\.css/);
+  assert.match(source, /critical\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
   assert.doesNotMatch(source, /withoutPreviousHelper/);
   assert.doesNotMatch(source, /Regex\.Replace\(current, markerPattern, string\.Empty/);
+  // Jellyfin Web cannot start without index.html, so it is staged and renamed
+  // rather than truncated in place by a write that dies partway through.
+  assert.match(source, /await WriteIndexAtomically\(indexPath, document, cancellationToken\)/);
+  assert.match(source, /File\.Move\(temporaryPath, indexPath, true\);/);
+  assert.doesNotMatch(source, /File\.WriteAllTextAsync\(indexPath/);
 });

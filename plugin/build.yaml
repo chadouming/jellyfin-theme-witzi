@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "0.1.15.0"
+version: "1.1.17.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,8 +17,11 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Gives every library episode a poster. The scheduled task now walks one
-  unpaged episode-id snapshot instead of re-querying by offset, so episodes can
-  no longer be skipped when registering artwork reorders the rows still being
-  paged, and episodes that share a multi-episode video file build their poster
-  once instead of racing for it.
+  Adopts the theme's version number so the plugin and stylesheet ship as one
+  release. Rewrites Jellyfin Web's index.html through an atomic rename so an
+  interrupted write can no longer truncate the web client, and injects a
+  pre-paint stylesheet into head so a detail page stops assembling itself in
+  front of the viewer. Fixes a short-read comparison that renamed intact poster
+  sidecars into backups on every run, replaces the per-episode directory scan
+  used to find sidecars, and stops re-reading both posters in full to confirm
+  artwork that has not changed.

@@ -27,6 +27,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private const int PosterHeight = 1500;
     private const int MaxConcurrentEpisodes = 4;
     private static readonly double[] FramePositions = [0.18d, 0.50d, 0.82d];
+    private static readonly string[] PrimarySidecarExtensions = BuildPrimarySidecarExtensions();
     private static readonly string[] BorderColorPalette =
     [
         "CBA6F7", // Mauve
@@ -436,8 +437,40 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         var primary = episode.GetImageInfo(ImageType.Primary, 0);
         return primary is not null
             && PathsEqual(primary.Path, primaryPosterPath)
-            && (PathsEqual(witziPosterPath, primaryPosterPath) || FilesEqual(witziPosterPath, primaryPosterPath))
+            && (PathsEqual(witziPosterPath, primaryPosterPath)
+                || IsUnmodifiedSinceRegistration(primaryPosterPath, witziPosterPath, primary)
+                || FilesEqual(witziPosterPath, primaryPosterPath))
             && GetProviderPrimarySidecars(mediaPath).All(path => PathsEqual(path, primaryPosterPath));
+    }
+
+    // RegisterPoster records the installed file's write time, so an untouched
+    // timestamp and size mean the Primary is still the copy this task made.
+    // Confirming that costs two metadata reads instead of reading both posters
+    // in full, which every already-current episode previously paid on each run.
+    // Anything that did change falls through to the byte comparison.
+    private static bool IsUnmodifiedSinceRegistration(
+        string primaryPosterPath,
+        string witziPosterPath,
+        ItemImageInfo primary)
+    {
+        if (primary.DateModified == default)
+        {
+            return false;
+        }
+
+        try
+        {
+            var primaryInfo = new FileInfo(primaryPosterPath);
+            var witziInfo = new FileInfo(witziPosterPath);
+            return primaryInfo.Exists
+                && witziInfo.Exists
+                && primaryInfo.LastWriteTimeUtc == primary.DateModified
+                && primaryInfo.Length == witziInfo.Length;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private async Task<string> ActivatePoster(
@@ -489,9 +522,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         }
 
         var mediaName = Path.GetFileNameWithoutExtension(mediaPath);
-        var thumbnailName = mediaName + "-thumb";
         var sidecars = new List<string>();
 
+        // Probe the fixed set of names Jellyfin recognizes rather than listing
+        // the directory. Listing costs one pass over every file in the folder
+        // and runs for each episode, so a flat library folder made this
+        // quadratic and dominated reruns that had no posters left to build.
         foreach (var searchDirectory in new[] { directory, Path.Combine(directory, "metadata") })
         {
             if (!Directory.Exists(searchDirectory))
@@ -499,31 +535,30 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 continue;
             }
 
-            try
+            foreach (var candidateName in new[] { mediaName, mediaName + "-thumb" })
             {
-                sidecars.AddRange(Directory.GetFiles(searchDirectory).Where(path =>
+                foreach (var extension in PrimarySidecarExtensions)
                 {
-                    if (!BaseItem.SupportedImageExtensions.Contains(
-                            Path.GetExtension(path),
-                            StringComparer.OrdinalIgnoreCase))
+                    var candidate = Path.Combine(searchDirectory, candidateName + extension);
+                    if (File.Exists(candidate))
                     {
-                        return false;
+                        sidecars.Add(candidate);
                     }
-
-                    var candidateName = Path.GetFileNameWithoutExtension(path);
-                    return string.Equals(candidateName, mediaName, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(candidateName, thumbnailName, StringComparison.OrdinalIgnoreCase);
-                }));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // Activation will still register the preferred path. A directory
-                // that cannot be enumerated also cannot contain a writable
-                // conflict that this task can safely preserve.
+                }
             }
         }
 
         return sidecars;
+    }
+
+    // Directory listing matched extensions case-insensitively, so keep the
+    // upper-case spelling reachable for case-sensitive media volumes.
+    private static string[] BuildPrimarySidecarExtensions()
+    {
+        return BaseItem.SupportedImageExtensions
+            .SelectMany(extension => new[] { extension, extension.ToUpperInvariant() })
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static void PreserveOriginalSidecar(string path, PosterRunLog runLog)
@@ -593,8 +628,13 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
 
         while (true)
         {
-            var firstRead = first.Read(firstBuffer);
-            var secondRead = second.Read(secondBuffer);
+            // Read may legally return less than the buffer without being at the
+            // end of the file, which network shares holding media folders do
+            // regularly. Filling both buffers first keeps a short read on one
+            // side from looking like a content difference, which would send an
+            // intact poster through sidecar preservation on every run.
+            var firstRead = first.ReadAtLeast(firstBuffer, firstBuffer.Length, false);
+            var secondRead = second.ReadAtLeast(secondBuffer, secondBuffer.Length, false);
             if (firstRead != secondRead)
             {
                 return false;
@@ -989,9 +1029,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 FileMode.Create,
                 FileAccess.Write,
                 FileShare.ReadWrite);
+            // Buffer routine progress and flush only the lines worth keeping if
+            // the server dies mid-run. Flushing every line meant a write syscall
+            // per message under the shared lock, with four workers contending.
             _writer = new StreamWriter(stream, new UTF8Encoding(false))
             {
-                AutoFlush = true
+                AutoFlush = false
             };
         }
 
@@ -1013,12 +1056,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
 
         public void Warning(string message, Exception? exception = null)
         {
-            Write("WRN", message, exception);
+            Write("WRN", message, exception, flush: true);
         }
 
         public void Error(string message, Exception exception)
         {
-            Write("ERR", message, exception);
+            Write("ERR", message, exception, flush: true);
         }
 
         public void Dispose()
@@ -1029,7 +1072,11 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             }
         }
 
-        private void Write(string level, string message, Exception? exception = null)
+        private void Write(
+            string level,
+            string message,
+            Exception? exception = null,
+            bool flush = false)
         {
             lock (_syncRoot)
             {
@@ -1037,6 +1084,11 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 if (exception is not null)
                 {
                     _writer.WriteLine(exception);
+                }
+
+                if (flush)
+                {
+                    _writer.Flush();
                 }
             }
         }

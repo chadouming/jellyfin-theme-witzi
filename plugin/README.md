@@ -39,8 +39,20 @@ Each run replaces `witzi-episode-posters.log` in Jellyfin's configured log
 directory. It contains the per-episode generated, reused, skipped, and failed
 results plus a final summary, instead of sending that detail to the main log.
 
-At server startup, the plugin also installs its embedded `witzi-posters.js`
-helper into Jellyfin Web. This makes the overview and item details live inside
+At server startup, the plugin installs two embedded blocks into Jellyfin Web.
+A small pre-paint stylesheet goes into `<head>`, and the `witzi-posters.js`
+helper goes before `</body>`.
+
+The pre-paint layer exists because a detail page used to assemble itself in
+front of the viewer: Jellyfin renders its own layout, then the helper moves the
+title, buttons, overview, and metadata into the ribbon. User Custom CSS loads
+far too late to cover that, but a plugin can write into `<head>`, so the moved
+regions stay hidden until the helper reports the panel is composed. A CSS
+failsafe reveals them regardless after 600ms, so a stalled helper can never
+leave a page blank. Both blocks are refreshed in place on later startups and
+never relocated past injections owned by other plugins.
+
+The helper This makes the overview and item details live inside
 the detail ribbon and enables portrait artwork on supported home rows without
 depending on the JavaScript Injector plugin. JavaScript is required because CSS
 cannot move live DOM nodes, replace episode image requests, or coordinate

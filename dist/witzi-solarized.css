@@ -37,6 +37,68 @@
   --witzi-pattern: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+CiAgPHJlY3Qgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIGZpbGw9IiMwMDJiMzYiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSIxOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDczNjQyIiBzdHJva2Utd2lkdGg9IjMiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSIxMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDczNjQyIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYwIiByPSIzLjUiIGZpbGw9IiNiNTg5MDAiIG9wYWNpdHk9Ii4yIi8+CiAgPGcgc3Ryb2tlPSIjMDczNjQyIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgICA8bGluZSB4MT0iNjAiIHkxPSIzNSIgeDI9IjYwIiB5Mj0iMjgiLz48bGluZSB4MT0iNjAiIHkxPSI5MiIgeDI9IjYwIiB5Mj0iODUiLz4KICAgIDxsaW5lIHgxPSIzNSIgeTE9IjYwIiB4Mj0iMjgiIHkyPSI2MCIvPjxsaW5lIHgxPSI5MiIgeTE9IjYwIiB4Mj0iODUiIHkyPSI2MCIvPgogICAgPGxpbmUgeDE9IjQyIiB5MT0iNDIiIHgyPSIzNyIgeTI9IjM3Ii8+PGxpbmUgeDE9Ijc4IiB5MT0iNzgiIHgyPSI4MyIgeTI9IjgzIi8+CiAgICA8bGluZSB4MT0iNzgiIHkxPSI0MiIgeDI9IjgzIiB5Mj0iMzciLz48bGluZSB4MT0iNDIiIHkxPSI3OCIgeDI9IjM3IiB5Mj0iODMiLz4KICA8L2c+CiAgPHBhdGggZD0iTTAsMjAgQTIwLDIwIDAgMCwxIDIwLDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3MzY0MiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTEwMCwwIEEyMCwyMCAwIDAsMSAxMjAsMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3MzY0MiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTAsMTAwIEEyMCwyMCAwIDAsMCAyMCwxMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3MzY0MiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHBhdGggZD0iTTEwMCwxMjAgQTIwLDIwIDAgMCwwIDEyMCwxMDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzA3MzY0MiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGNpcmNsZSBjeD0iMjAiIGN5PSI2MCIgcj0iMyIgZmlsbD0iIzI2OGJkMiIgb3BhY2l0eT0iLjE1Ii8+CiAgPGNpcmNsZSBjeD0iMTAwIiBjeT0iNjAiIHI9IjMiIGZpbGw9IiMyYWExOTgiIG9wYWNpdHk9Ii4xNSIvPgogIDxjaXJjbGUgY3g9IjYwIiBjeT0iMjAiIHI9IjMiIGZpbGw9IiNiNTg5MDAiIG9wYWNpdHk9Ii4xNSIvPgogIDxjaXJjbGUgY3g9IjYwIiBjeT0iMTAwIiByPSIzIiBmaWxsPSIjY2I0YjE2IiBvcGFjaXR5PSIuMTUiLz4KPC9zdmc+");
 }
 
+/* Witzi pre-paint layer.
+ *
+ * Jellyfin renders a detail page before the browser helper can move its live
+ * title, buttons, overview, and metadata into the ribbon, so the composition
+ * used to happen in front of the viewer. These rules hold the moved regions
+ * back until the helper reports the panel is assembled.
+ *
+ * The plugin injects this file into <head> because user Custom CSS arrives too
+ * late to cover the first paint. Compiled bundles carry the same rules so the
+ * JavaScript Injector path behaves identically once the theme loads.
+ *
+ * Everything is gated on html[data-witzi-posters], which the helper sets as
+ * its first action. Without the helper, Jellyfin renders exactly as shipped.
+ */
+
+html[data-witzi-posters] #itemDetailPage:not([data-witzi-detail-content="active"]) :is(
+  .infoWrapper,
+  .mainDetailButtons,
+  .detailSectionContent,
+  .itemDetailsGroup
+) {
+  opacity: 0;
+  /* Failsafe. If the helper stalls, errors, or never reaches "active", the
+   * page reveals itself anyway. A jump is a much smaller problem than content
+   * that stays invisible, so this must not depend on JavaScript running. */
+  animation: witzi-detail-failsafe 200ms ease-out 600ms forwards;
+}
+
+html[data-witzi-posters] #itemDetailPage[data-witzi-detail-content="active"] :is(
+  .infoWrapper,
+  .mainDetailButtons,
+  .detailSectionContent,
+  .itemDetailsGroup
+) {
+  opacity: 1;
+  /* A separate name so flipping the attribute restarts the animation instead
+   * of letting the delayed failsafe keep running. */
+  animation: witzi-detail-reveal 160ms ease-out forwards;
+}
+
+@keyframes witzi-detail-failsafe {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes witzi-detail-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-witzi-posters] #itemDetailPage[data-witzi-detail-content="active"] :is(
+    .infoWrapper,
+    .mainDetailButtons,
+    .detailSectionContent,
+    .itemDetailsGroup
+  ) {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 /*
  * Witzi for Jellyfin — shared component layer
  *
@@ -734,8 +796,34 @@ html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .w
   background-size: contain !important;
 }
 
+/* canLoad() has already decoded and cached the poster by the time the helper
+ * swaps it in, so this fades a ready image rather than masking a pending
+ * one. Without it the native landscape frame snaps to the poster. */
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .cardImageContainer {
+  animation: witzi-card-reveal 220ms ease-out;
+}
+
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .blurhash-canvas {
+  transition: opacity 220ms ease-out;
+}
+
 .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .blurhash-canvas {
   opacity: 0 !important;
+}
+
+@keyframes witzi-card-reveal {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .cardImageContainer {
+    animation: none;
+  }
+
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .blurhash-canvas {
+    transition: none;
+  }
 }
 
 /* Mobile cards remain tappable; only the redundant corner play indicator goes. */

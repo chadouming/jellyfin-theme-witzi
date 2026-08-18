@@ -695,8 +695,34 @@ html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .w
   background-size: contain !important;
 }
 
+/* canLoad() has already decoded and cached the poster by the time the helper
+ * swaps it in, so this fades a ready image rather than masking a pending
+ * one. Without it the native landscape frame snaps to the poster. */
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .cardImageContainer {
+  animation: witzi-card-reveal 220ms ease-out;
+}
+
+.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .blurhash-canvas {
+  transition: opacity 220ms ease-out;
+}
+
 .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .blurhash-canvas {
   opacity: 0 !important;
+}
+
+@keyframes witzi-card-reveal {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .cardImageContainer {
+    animation: none;
+  }
+
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .blurhash-canvas {
+    transition: none;
+  }
 }
 
 /* Mobile cards remain tappable; only the redundant corner play indicator goes. */
