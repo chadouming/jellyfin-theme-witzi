@@ -61,5 +61,12 @@ rather than this plugin's Jellyfin 12 ABI. The Jellyfin service needs write
 access to the web client's `index.html`; if the web directory is read-only, the
 startup task logs an error and the helper can still be installed manually.
 
-The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC4
+The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC5
 packages. It is not loadable by Jellyfin 10.x.
+
+Once a poster is written, open browsers pick it up without a reload. The helper
+subscribes to the websocket messages Jellyfin already sends and, on a
+`LibraryChanged` or `UserDataChanged` message, drops only the affected items
+from its poster cache and rescans. It appends to the client's own listener list
+and never takes over the socket, so a client that exposes neither still
+refreshes on the cache timeout.

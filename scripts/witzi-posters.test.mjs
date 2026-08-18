@@ -288,6 +288,85 @@ test('uses only each item own loadable Primary and never overlays inherited artw
   assert.equal(calls.length, 1);
 });
 
+test('refreshes a regenerated poster from a server message without a reload', async () => {
+  const cards = [createCard('episode-1', 'Episode')];
+  const calls = [];
+  let posterTag = 'tag-v1';
+
+  const api = {
+    // Jellyfin populates this before the helper runs; the helper appends to it
+    // the same way the client's own Events.on does.
+    _callbacks: {},
+    getCurrentUserId: () => 'user-1',
+    getScaledImageUrl: (id, options) => `https://jellyfin.test/Items/${id}/Images/${options.type}?tag=${options.tag}`,
+    async getItems(_userId, options) {
+      calls.push(options.Ids);
+      return {
+        Items: [{
+          Id: 'episode-1',
+          Type: 'Episode',
+          ImageTags: { Primary: posterTag },
+          PrimaryImageAspectRatio: 0.6667
+        }]
+      };
+    }
+  };
+
+  const context = {
+    console,
+    Image: class {
+      set src(url) { setTimeout(() => this.onload?.(), 0); }
+    },
+    document: {
+      readyState: 'complete',
+      documentElement: { setAttribute() {}, removeAttribute() {} },
+      querySelectorAll: () => cards,
+      addEventListener() {}
+    },
+    MutationObserver: class { observe() {} },
+    setTimeout,
+    clearTimeout
+  };
+  context.window = {
+    ApiClient: api,
+    addEventListener() {},
+    clearTimeout,
+    requestAnimationFrame: (callback) => setTimeout(callback, 0),
+    setTimeout: unrefTimeout
+  };
+
+  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  assert.equal(calls.length, 1);
+  assert.match(cards[0].image.getAttribute('data-src'), /tag=tag-v1/);
+  assert.equal(api._callbacks.message?.length, 1);
+
+  // The poster task rewrites the artwork, so the server sends a new tag.
+  posterTag = 'tag-v2';
+
+  // An unrelated item must not cost a refetch.
+  api._callbacks.message.forEach((fn) => fn({ type: 'message' }, {
+    MessageType: 'LibraryChanged',
+    Data: { ItemsUpdated: ['some-other-item'] }
+  }));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(calls.length, 1);
+  assert.match(cards[0].image.getAttribute('data-src'), /tag=tag-v1/);
+
+  // Jellyfin sends dashed ids; the cache is keyed on the card's undashed id.
+  api._callbacks.message.forEach((fn) => fn({ type: 'message' }, {
+    MessageType: 'LibraryChanged',
+    Data: { ItemsUpdated: ['EPISODE-1'] }
+  }));
+  await new Promise((resolve) => setTimeout(resolve, 60));
+
+  assert.equal(calls.length, 2);
+  assert.match(cards[0].image.getAttribute('data-src'), /tag=tag-v2/);
+  assert.equal(cards[0].dataset.witziArtwork, 'poster');
+});
+
 test('keeps the current backdrop visible until a newer backdrop is ready', async () => {
   const urls = {
     first: 'https://jellyfin.test/Items/first/Images/Backdrop',

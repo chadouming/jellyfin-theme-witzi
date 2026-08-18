@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "1.1.18.0",
+        "changelog": "Builds against the Jellyfin 12.0 RC5 packages; the plugin ABI is unchanged at 12.0.0.0. Newly generated posters now appear without reloading the page, because the browser helper subscribes to the websocket messages Jellyfin already sends and drops only the affected items from its cache when the server reports them changed.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.18/Witzi.Episode.Posters_1.1.18.0.zip",
+        "checksum": "4bf602c972a478473ef0340c853a8aae",
+        "timestamp": "2026-08-18T19:06:28Z"
+      },
+      {
         "version": "1.1.17.0",
         "changelog": "Adopts the theme version number so the plugin and stylesheet ship as one release. Rewrites Jellyfin Web index.html through an atomic rename so an interrupted write can no longer truncate the web client, and injects a pre-paint stylesheet into head so a detail page stops assembling itself in front of the viewer. Fixes a short-read comparison that renamed intact poster sidecars into backups on every run, replaces the per-episode directory scan used to find sidecars, and stops re-reading both posters in full to confirm artwork that has not changed.",
         "targetAbi": "12.0.0.0",

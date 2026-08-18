@@ -76,6 +76,8 @@
   let themeWaitAttempts = 0;
   let themeWaitTimer;
   let videoPlaybackActive = false;
+  let messageSubscription = null;
+  let socketSubscription = null;
 
   function getApiClient() {
     return window.ApiClient || null;
@@ -158,6 +160,102 @@
     }
 
     return entry.url;
+  }
+
+  function normalizeItemId(id) {
+    return typeof id === 'string' ? id.replace(/-/g, '').toLowerCase() : '';
+  }
+
+  function invalidateItems(ids) {
+    const wanted = new Set(ids.map(normalizeItemId).filter(Boolean));
+    if (!wanted.size) return false;
+
+    let dropped = false;
+    for (const id of [...itemCache.keys()]) {
+      if (wanted.has(normalizeItemId(id))) {
+        itemCache.delete(id);
+        dropped = true;
+      }
+    }
+
+    // Clearing the negative cache too, so an episode that had no poster
+    // when it was last checked picks one up as soon as the task writes it.
+    for (const id of [...retryAfter.keys()]) {
+      if (wanted.has(normalizeItemId(id))) {
+        retryAfter.delete(id);
+        dropped = true;
+      }
+    }
+
+    return dropped;
+  }
+
+  function handleServerMessage(message) {
+    if (!message || typeof message !== 'object') return;
+
+    const data = message.Data;
+    let ids;
+    if (message.MessageType === 'LibraryChanged' && data) {
+      ids = [...(data.ItemsUpdated || []), ...(data.ItemsAdded || [])];
+    } else if (message.MessageType === 'UserDataChanged' && Array.isArray(data?.UserDataList)) {
+      ids = data.UserDataList.map((entry) => entry?.ItemId);
+    } else {
+      return;
+    }
+
+    // Cards hold their current artwork until a replacement has loaded, so
+    // this refreshes in place rather than flashing back to native frames.
+    if (invalidateItems(ids)) scheduleCards();
+  }
+
+  function onApiClientMessage(_event, message) {
+    try {
+      handleServerMessage(message);
+    } catch {
+      // Never throw inside Jellyfin's own dispatch loop.
+    }
+  }
+
+  function onSocketMessage(event) {
+    try {
+      handleServerMessage(JSON.parse(event.data));
+    } catch {
+      // Frames that are not JSON are not ours to interpret.
+    }
+  }
+
+  function subscribeToServerMessages() {
+    const api = getApiClient();
+    if (!api || messageSubscription === api) return;
+
+    // Jellyfin's ApiClient keeps its listeners in a plain _callbacks map and
+    // appending to it is exactly what its Events.on does, so this subscribes
+    // to parsed messages without importing the module or touching the socket.
+    try {
+      if (api._callbacks && typeof api._callbacks === 'object') {
+        const listeners = api._callbacks.message || (api._callbacks.message = []);
+        if (Array.isArray(listeners) && !listeners.includes(onApiClientMessage)) {
+          listeners.push(onApiClientMessage);
+          messageSubscription = api;
+          return;
+        }
+      }
+    } catch {
+      // Fall through to the socket.
+    }
+
+    // Fallback. The client assigns socket.onmessage rather than adding a
+    // listener, so an extra passive listener cannot displace its handler.
+    // Re-checked on every schedule so a reconnected socket is picked up.
+    try {
+      const socket = api._webSocket;
+      if (socket && typeof socket.addEventListener === 'function' && socket !== socketSubscription) {
+        socket.addEventListener('message', onSocketMessage);
+        socketSubscription = socket;
+      }
+    } catch {
+      // Without either path the cache TTL still refreshes posters.
+    }
   }
 
   async function resolvePosters(api, ids) {
@@ -579,6 +677,7 @@
   }
 
   function schedule() {
+    subscribeToServerMessages();
     scheduleDetail();
     scheduleMedia();
   }

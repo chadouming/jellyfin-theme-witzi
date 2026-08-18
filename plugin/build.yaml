@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "1.1.17.0"
+version: "1.1.18.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,11 +17,8 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Adopts the theme's version number so the plugin and stylesheet ship as one
-  release. Rewrites Jellyfin Web's index.html through an atomic rename so an
-  interrupted write can no longer truncate the web client, and injects a
-  pre-paint stylesheet into head so a detail page stops assembling itself in
-  front of the viewer. Fixes a short-read comparison that renamed intact poster
-  sidecars into backups on every run, replaces the per-episode directory scan
-  used to find sidecars, and stops re-reading both posters in full to confirm
-  artwork that has not changed.
+  Builds against the Jellyfin 12.0 RC5 packages; the plugin ABI is unchanged at
+  12.0.0.0. Newly generated posters now appear without reloading the page: the
+  browser helper subscribes to Jellyfin's own websocket messages and drops just
+  the affected items from its cache when the server reports them changed, so
+  rerunning the poster task refreshes open clients in place.
