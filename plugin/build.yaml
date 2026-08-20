@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "1.1.19.0"
+version: "1.1.20.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,10 +17,10 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Fixes the helper failing to install on servers whose Jellyfin Web directory
-  does not allow new files. Since 1.1.17.0 the index.html replacement was staged
-  as a temporary file beside the target, which needs write access to the
-  directory, while the previous in-place write only needed it on index.html.
-  Container images commonly grant the second and not the first. Staging is still
-  preferred because it cannot leave a truncated web client behind, but a refused
-  staging file now falls back to writing in place and logs a warning.
+  Stops a library scan replacing generated posters with Jellyfin's default
+  episode artwork. Installing the poster under the recognized sidecar name only
+  selected it once, and a scan rebuilds that choice from whatever the image
+  providers return. The plugin now contributes the Witzi poster as a local image
+  provider, so it takes part in every refresh, is offered ahead of Jellyfin's own
+  episode provider, and marks the Primary image as stored with the media, which
+  suppresses the remote fetch that downloaded a screenshot over it.

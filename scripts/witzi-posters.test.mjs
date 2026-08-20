@@ -1213,9 +1213,11 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   assert.ok(processEpisode.indexOf('FindExistingWitziPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('ActivatePoster(') < processEpisode.indexOf('GetVideoStream(episode)'));
-  assert.match(source, /Path\.GetFileNameWithoutExtension\(mediaPath\) \+ "-witzi\.jpg"/);
+  // The poster location is shared with the image provider so the two cannot
+  // disagree about where a Witzi poster lives.
+  assert.match(source, /WitziPosterFiles\.GetPosterPaths\(mediaPath\)\[0\]/);
   assert.match(source, /private static IEnumerable<string> GetWitziPosterPaths\(string mediaPath\)/);
-  assert.match(source, /Path\.Combine\(directory, "metadata", fileName\)/);
+  assert.match(source, /return WitziPosterFiles\.GetPosterPaths\(mediaPath\);/);
   assert.match(source, /private string\? FindLegacyWitziPoster\(Episode episode, string mediaPath\)/);
   assert.match(source, /private async Task<string> ActivatePoster\(/);
   assert.match(source, /private static string GetPrimaryPosterPath\(string mediaPath\)/);
@@ -1243,6 +1245,42 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   assert.match(source, /FileMode\.Create/);
   assert.match(source, /Completed Witzi poster generation/);
   assert.doesNotMatch(source, /ILogger<GenerateEpisodePostersTask>|_logger\.Log/);
+});
+
+test('re-supplies the Witzi poster to Jellyfin on every library scan', async () => {
+  const provider = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/Providers/WitziEpisodeImageProvider.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+  const shared = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/WitziPosterFiles.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+
+  // A local image provider is exempt from the image-fetcher enable check, so
+  // this cannot be switched off by a library's configuration.
+  assert.match(provider, /class WitziEpisodeImageProvider : ILocalImageProvider, IHasOrder/);
+  assert.match(provider, /item is Episode/);
+  assert.match(provider, /Type = ImageType\.Primary/);
+  // ItemImageProvider keeps the first local image offered for a type, and
+  // Jellyfin's own episode provider uses order zero.
+  assert.match(provider, /public int Order => -1;/);
+  assert.match(provider, /directoryService\.GetFile\(posterPath\)/);
+  // Only one Primary is useful, and the media-folder copy is the one that earns
+  // protection from a remote fetcher.
+  assert.match(provider, /yield break;/);
+
+  // The media directory must be offered before the metadata subdirectory.
+  const mediaFirst = shared.indexOf('Path.Combine(directory, fileName)');
+  const metadataSecond = shared.indexOf('Path.Combine(directory, "metadata", fileName)');
+  assert.ok(mediaFirst > -1 && metadataSecond > mediaFirst);
+  assert.match(shared, /PosterSuffix = "-witzi\.jpg"/);
 });
 
 test('keeps a current injected helper in place around other plugin scripts', async () => {

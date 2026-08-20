@@ -209,7 +209,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         // ActivatePoster also installs a copy at <video basename>.jpg because
         // Jellyfin's episode local-image provider only persists basename and
         // -thumb sidecars across metadata refreshes.
-        var posterPath = Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + "-witzi.jpg");
+        var posterPath = WitziPosterFiles.GetPosterPaths(mediaPath)[0];
 
         // A multi-episode file gives several episodes one video and therefore
         // one poster path. Concurrent workers would each compose the poster and
@@ -394,19 +394,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
 
     private static IEnumerable<string> GetWitziPosterPaths(string mediaPath)
     {
-        var directory = Path.GetDirectoryName(mediaPath);
-        if (string.IsNullOrEmpty(directory))
-        {
-            return [];
-        }
-
-        var mediaName = Path.GetFileNameWithoutExtension(mediaPath);
-        var fileName = mediaName + "-witzi.jpg";
-        return
-        [
-            Path.Combine(directory, fileName),
-            Path.Combine(directory, "metadata", fileName)
-        ];
+        return WitziPosterFiles.GetPosterPaths(mediaPath);
     }
 
     private string? FindLegacyWitziPoster(Episode episode, string mediaPath)

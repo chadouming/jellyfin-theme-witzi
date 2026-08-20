@@ -23,6 +23,16 @@ Native clients can therefore use it without the Witzi browser helper. Existing
 local Primary sidecars are moved to ignored `*-witzi-original*` backup names;
 remote or provider-managed source artwork is not deleted.
 
+The plugin also registers the Witzi poster as a local image provider, so
+Jellyfin asks for it during every metadata refresh instead of only when the
+poster is first installed. A library scan rebuilds each image choice from what
+the providers return, so a poster that is merely written to disk can be replaced
+by a downloaded episode screenshot. The provider is offered ahead of Jellyfin's
+own episode provider and reports a file stored beside the media, which also
+marks the Primary image as locally provided and suppresses the remote fetch.
+Local image providers cannot be turned off in a library's image fetcher
+settings, so this applies to every library.
+
 Before starting FFmpeg, the plugin checks for the dedicated Witzi file in both
 the media directory and its `metadata` subdirectory. If it is already Primary,
 the episode is skipped; if it exists but another image became Primary, the
