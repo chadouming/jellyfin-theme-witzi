@@ -1283,6 +1283,43 @@ test('re-supplies the Witzi poster to Jellyfin on every library scan', async () 
   assert.match(shared, /PosterSuffix = "-witzi\.jpg"/);
 });
 
+test('restores Witzi posters that a library scan replaced', async () => {
+  const scan = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/ReassertWitziPostersTask.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+  const task = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/GenerateEpisodePostersTask.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+
+  // Runs after every scan, so it converges however Jellyfin's merge landed.
+  assert.match(scan, /class ReassertWitziPostersTask : ILibraryPostScanTask/);
+  assert.match(scan, /ReassertExistingPostersAsync\(progress, cancellationToken\)/);
+
+  const body = task.slice(
+    task.indexOf('internal async Task ReassertExistingPostersAsync'),
+    task.indexOf('private async Task<EpisodeOutcome> ProcessEpisode')
+  );
+  // A scan must never trigger FFmpeg: an episode with no existing poster is
+  // skipped rather than generated.
+  assert.ok(body.length > 0);
+  assert.doesNotMatch(body, /ExtractFrame|WritePoster|GetVideoStream/);
+  assert.match(body, /if \(existingPosterPath is null\)/);
+  assert.match(body, /IsPersistentWitziPrimary\(episode, mediaPath, existingPosterPath\)/);
+  assert.match(body, /await ActivatePoster\(/);
+  // Its own log, so it cannot clobber the generation diagnostics.
+  assert.match(body, /PosterRunLog\.Create\(_applicationPaths\.LogDirectoryPath, ScanLogFileName\)/);
+  assert.match(task, /ScanLogFileName = "witzi-episode-posters-scan\.log"/);
+  assert.match(body, /restored=\{restored\}/);
+});
+
 test('keeps a current injected helper in place around other plugin scripts', async () => {
   const source = await readFile(
     new URL(

@@ -23,6 +23,7 @@ namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 /// </summary>
 public sealed class GenerateEpisodePostersTask : IScheduledTask
 {
+    private const string ScanLogFileName = "witzi-episode-posters-scan.log";
     private const int PosterWidth = 1000;
     private const int PosterHeight = 1500;
     private const int MaxConcurrentEpisodes = 4;
@@ -181,6 +182,91 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 ", ",
                 Enum.GetValues<EpisodeOutcome>().Select(outcome =>
                     $"{OutcomeLabel(outcome)}={outcomeCounts[(int)outcome]}")));
+        progress.Report(100);
+    }
+
+    /// <summary>
+    /// Re-selects Witzi posters that a library scan replaced. Jellyfin rebuilds
+    /// every image choice from what its providers return, so an episode can lose
+    /// artwork this plugin already installed. This never generates anything: an
+    /// episode with no existing Witzi poster is left exactly as it is.
+    /// </summary>
+    /// <param name="progress">Progress reporter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the pass.</returns>
+    internal async Task ReassertExistingPostersAsync(
+        IProgress<double> progress,
+        CancellationToken cancellationToken)
+    {
+        using var runLog = PosterRunLog.Create(_applicationPaths.LogDirectoryPath, ScanLogFileName);
+        var query = new InternalItemsQuery
+        {
+            IncludeItemTypes = [BaseItemKind.Episode],
+            SourceTypes = [SourceType.Library],
+            IsVirtualItem = false,
+            IsFolder = false,
+            Recursive = true
+        };
+
+        var episodeIds = _libraryManager.GetItemIds(query);
+        runLog.Information($"Checking {episodeIds.Count} episodes for Witzi posters replaced during the scan.");
+
+        var restored = 0;
+        var current = 0;
+        var withoutPoster = 0;
+        var completed = 0;
+
+        foreach (var episodeId in episodeIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            completed++;
+            progress.Report(100d * completed / Math.Max(episodeIds.Count, 1));
+
+            var episode = _libraryManager.GetItemById<Episode>(episodeId);
+            if (episode is null || GetIneligibleReason(episode) is not null)
+            {
+                continue;
+            }
+
+            try
+            {
+                var mediaPath = episode.Path!;
+                var existingPosterPath = FindExistingWitziPoster(episode, mediaPath);
+                if (existingPosterPath is null)
+                {
+                    withoutPoster++;
+                    continue;
+                }
+
+                if (IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath))
+                {
+                    current++;
+                    continue;
+                }
+
+                await ActivatePoster(
+                    episode,
+                    mediaPath,
+                    existingPosterPath,
+                    runLog,
+                    cancellationToken).ConfigureAwait(false);
+                restored++;
+                runLog.Information($"Restored the Witzi poster replaced during the scan for {mediaPath}");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                runLog.Error($"Could not restore the Witzi poster for {episode.Path}", ex);
+            }
+        }
+
+        // A non-zero restored count means the scan is still taking posters back,
+        // which is the number worth watching after a library scan.
+        runLog.Information(
+            $"Completed the post-scan Witzi poster check. restored={restored}, already-current={current}, no-witzi-poster={withoutPoster}");
         progress.Report(100);
     }
 
@@ -1026,10 +1112,10 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             };
         }
 
-        public static PosterRunLog Create(string logDirectoryPath)
+        public static PosterRunLog Create(string logDirectoryPath, string fileName = LogFileName)
         {
             Directory.CreateDirectory(logDirectoryPath);
-            return new PosterRunLog(Path.Combine(logDirectoryPath, LogFileName));
+            return new PosterRunLog(Path.Combine(logDirectoryPath, fileName));
         }
 
         public void Debug(string message, Exception? exception = null)

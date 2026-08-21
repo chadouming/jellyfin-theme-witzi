@@ -59,3 +59,43 @@ html[data-witzi-posters] #itemDetailPage[data-witzi-detail-content="active"] :is
     opacity: 1;
   }
 }
+
+/* Continue Watching and Next Up paint Jellyfin's landscape frame before the
+ * helper can ask the server which poster belongs there, so the wrong image was
+ * visible first and then replaced. Hold the frame back until the helper marks
+ * the card decided, which it does only after a poster has finished loading or
+ * after it has settled on keeping the native artwork. */
+html[data-witzi-posters]
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
+  .card[data-id]:not([data-witzi-artwork]) .cardImageContainer {
+  opacity: 0;
+  /* Same failsafe as the detail ribbon. A helper that never decides must not
+   * leave a row of blank cards behind. */
+  animation: witzi-card-failsafe 200ms ease-out 600ms forwards;
+}
+
+html[data-witzi-posters]
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
+  .card[data-id][data-witzi-artwork] .cardImageContainer {
+  opacity: 1;
+  animation: witzi-card-reveal 200ms ease-out forwards;
+}
+
+@keyframes witzi-card-failsafe {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes witzi-card-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-witzi-posters]
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
+    .card[data-id][data-witzi-artwork] .cardImageContainer {
+    animation: none;
+    opacity: 1;
+  }
+}

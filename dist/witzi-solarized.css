@@ -99,6 +99,46 @@ html[data-witzi-posters] #itemDetailPage[data-witzi-detail-content="active"] :is
   }
 }
 
+/* Continue Watching and Next Up paint Jellyfin's landscape frame before the
+ * helper can ask the server which poster belongs there, so the wrong image was
+ * visible first and then replaced. Hold the frame back until the helper marks
+ * the card decided, which it does only after a poster has finished loading or
+ * after it has settled on keeping the native artwork. */
+html[data-witzi-posters]
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
+  .card[data-id]:not([data-witzi-artwork]) .cardImageContainer {
+  opacity: 0;
+  /* Same failsafe as the detail ribbon. A helper that never decides must not
+   * leave a row of blank cards behind. */
+  animation: witzi-card-failsafe 200ms ease-out 600ms forwards;
+}
+
+html[data-witzi-posters]
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
+  .card[data-id][data-witzi-artwork] .cardImageContainer {
+  opacity: 1;
+  animation: witzi-card-reveal 200ms ease-out forwards;
+}
+
+@keyframes witzi-card-failsafe {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes witzi-card-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-witzi-posters]
+  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
+    .card[data-id][data-witzi-artwork] .cardImageContainer {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 /*
  * Witzi for Jellyfin — shared component layer
  *
@@ -796,13 +836,6 @@ html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .w
   background-size: contain !important;
 }
 
-/* canLoad() has already decoded and cached the poster by the time the helper
- * swaps it in, so this fades a ready image rather than masking a pending
- * one. Without it the native landscape frame snaps to the poster. */
-.itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .cardImageContainer {
-  animation: witzi-card-reveal 220ms ease-out;
-}
-
 .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .blurhash-canvas {
   transition: opacity 220ms ease-out;
 }
@@ -811,16 +844,7 @@ html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .w
   opacity: 0 !important;
 }
 
-@keyframes witzi-card-reveal {
-  from { opacity: 0.4; }
-  to { opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .witzi-poster-card .cardImageContainer {
-    animation: none;
-  }
-
   .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"] .blurhash-canvas {
     transition: none;
   }

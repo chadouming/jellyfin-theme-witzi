@@ -33,6 +33,15 @@ marks the Primary image as locally provided and suppresses the remote fetch.
 Local image providers cannot be turned off in a library's image fetcher
 settings, so this applies to every library.
 
+After every library scan the plugin also re-checks each episode and restores
+any Witzi poster the scan replaced. Whether the image provider wins Jellyfin's
+merge depends on the library's configured image fetcher order, so offering the
+poster is not on its own a guarantee. This pass never generates artwork; an
+episode with no existing Witzi poster is left untouched, so a scan never starts
+FFmpeg. Each run writes `witzi-episode-posters-scan.log` in the configured log
+directory with a `restored=` count, which is the number worth watching if
+posters still change after a scan.
+
 Before starting FFmpeg, the plugin checks for the dedicated Witzi file in both
 the media directory and its `metadata` subdirectory. If it is already Primary,
 the episode is skipped; if it exists but another image became Primary, the

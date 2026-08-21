@@ -367,7 +367,17 @@
       return;
     }
 
-    cards.forEach((card) => pendingCards.add(card));
+    cards.forEach((card) => {
+      pendingCards.add(card);
+
+      // Jellyfin reuses card elements for different items. The decision
+      // attribute is what lifts the pre-paint mask, so a stale one would
+      // reveal the previous item's artwork in the new card.
+      if (card.dataset.witziPosterId !== card.dataset.id) {
+        delete card.dataset.witziArtwork;
+        card.classList.remove('witzi-poster-card');
+      }
+    });
     // Continue Watching and Next Up can both show one episode, so ask once.
     const ids = [...new Set(cards.map((card) => card.dataset.id))];
 
