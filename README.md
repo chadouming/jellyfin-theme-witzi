@@ -131,12 +131,18 @@ Source files stay intentionally dependency-free:
 
 ```text
 assets/          Witzi's palette-specific SVG tiles
-plugin/          Jellyfin 12 episode-poster plugin source and ABI manifest
+src/             Shared styling
 src/palettes/    Palette tokens
-src/             Shared styling, pre-paint layer, and poster-helper source
 themes/          Small composable @import entry points
 dist/            Standalone CSS builds and the browser helper
 scripts/         Dependency-free build/check script
+plugin/          Jellyfin 12 episode-poster plugin source and ABI manifest
+  Jellyfin.Plugin.WitziEpisodePosters/
+    Posters/     Poster identity, composition, and installation
+    Providers/   Supplies the poster to Jellyfin as a local image
+    ScheduledTasks/
+    Web/         Pre-paint layer and poster-helper source, embedded into the
+                 plugin assembly and also inlined into the theme bundle
 ```
 
 After changing a palette or the shared layer:
@@ -146,7 +152,7 @@ npm run build
 npm test
 ```
 
-Do not edit `dist/` directly; it is regenerated from `src/`.
+Do not edit `dist/` directly; it is regenerated from `src/` and the plugin's `Web/`.
 
 ## Design notes
 
