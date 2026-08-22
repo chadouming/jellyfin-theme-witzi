@@ -602,11 +602,12 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         return new PosterActivation(primaryPosterPath, registered);
     }
 
+    // Shared with WitziEpisodeImageProvider: both halves must register and offer the same
+    // file, or each scan rewrites the other's choice and re-saves every episode.
     private static string GetPrimaryPosterPath(string mediaPath)
     {
-        var directory = Path.GetDirectoryName(mediaPath)
+        return WitziPosterFiles.GetInstalledPosterPath(mediaPath)
             ?? throw new ArgumentException("The media path has no containing directory.", nameof(mediaPath));
-        return Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + ".jpg");
     }
 
     private static IEnumerable<string> GetProviderPrimarySidecars(string mediaPath)
