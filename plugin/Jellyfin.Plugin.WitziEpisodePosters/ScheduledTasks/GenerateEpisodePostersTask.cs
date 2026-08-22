@@ -222,6 +222,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         runLog.Information($"Checking {episodeIds.Count} episodes for Witzi posters replaced during the scan.");
 
         var restored = 0;
+        var deferred = 0;
         var current = 0;
         var withoutPoster = 0;
         var completed = 0;
@@ -254,14 +255,21 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                     continue;
                 }
 
-                await ActivatePoster(
+                var activation = await ActivatePoster(
                     episode,
                     mediaPath,
                     existingPosterPath,
                     runLog,
                     cancellationToken).ConfigureAwait(false);
-                restored++;
-                runLog.Information($"Restored the Witzi poster replaced during the scan for {mediaPath}");
+                if (activation.Registered)
+                {
+                    restored++;
+                    runLog.Information($"Restored the Witzi poster replaced during the scan for {mediaPath}");
+                }
+                else
+                {
+                    deferred++;
+                }
             }
             catch (OperationCanceledException)
             {
@@ -276,7 +284,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         // A non-zero restored count means the scan is still taking posters back,
         // which is the number worth watching after a library scan.
         runLog.Information(
-            $"Completed the post-scan Witzi poster check. restored={restored}, already-current={current}, no-witzi-poster={withoutPoster}");
+            $"Completed the post-scan Witzi poster check. restored={restored}, deferred={deferred}, already-current={current}, no-witzi-poster={withoutPoster}");
         progress.Report(100);
     }
 
@@ -344,15 +352,17 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
                 return EpisodeOutcome.AlreadyCurrent;
             }
 
-            var primaryPosterPath = await ActivatePoster(
+            var activation = await ActivatePoster(
                 episode,
                 mediaPath,
                 existingPosterPath,
                 runLog,
                 cancellationToken).ConfigureAwait(false);
             runLog.Information(
-                $"Registered existing Witzi episode poster {primaryPosterPath} as Primary for {mediaPath}");
-            return EpisodeOutcome.ReactivatedExisting;
+                $"Registered existing Witzi episode poster {activation.PrimaryPosterPath} as Primary for {mediaPath}");
+            return activation.Registered
+                ? EpisodeOutcome.ReactivatedExisting
+                : EpisodeOutcome.RegistrationDeferred;
         }
 
         if (File.Exists(posterPath))
@@ -409,15 +419,17 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             }
 
             await WritePoster(extractedFrames, posterPath, runLog, cancellationToken).ConfigureAwait(false);
-            var primaryPosterPath = await ActivatePoster(
+            var activation = await ActivatePoster(
                 episode,
                 mediaPath,
                 posterPath,
                 runLog,
                 cancellationToken).ConfigureAwait(false);
             runLog.Information($"Generated Witzi episode poster {posterPath}");
-            runLog.Debug($"Installed Witzi Primary sidecar {primaryPosterPath}");
-            return EpisodeOutcome.Generated;
+            runLog.Debug($"Installed Witzi Primary sidecar {activation.PrimaryPosterPath}");
+            return activation.Registered
+                ? EpisodeOutcome.Generated
+                : EpisodeOutcome.RegistrationDeferred;
         }
         finally
         {
@@ -557,7 +569,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         }
     }
 
-    private async Task<string> ActivatePoster(
+    private async Task<PosterActivation> ActivatePoster(
         Episode episode,
         string mediaPath,
         string witziPosterPath,
@@ -586,8 +598,8 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             }
         }
 
-        await RegisterPoster(episode, primaryPosterPath, cancellationToken).ConfigureAwait(false);
-        return primaryPosterPath;
+        var registered = await TryRegisterPoster(episode, primaryPosterPath, runLog, cancellationToken).ConfigureAwait(false);
+        return new PosterActivation(primaryPosterPath, registered);
     }
 
     private static string GetPrimaryPosterPath(string mediaPath)
@@ -1040,6 +1052,35 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         return new FfmpegResult(process.ExitCode, await errorTask.ConfigureAwait(false));
     }
 
+    // The poster file and its sidecar copy are fully installed before this
+    // runs, and the local image provider offers the poster on every refresh
+    // while the post-scan pass re-selects it. A write that keeps losing to
+    // Jellyfin's own concurrent save of the same item therefore costs the
+    // immediate update, not the poster, so it is reported rather than thrown.
+    private static async Task<bool> TryRegisterPoster(
+        Episode episode,
+        string posterPath,
+        PosterRunLog runLog,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await RegisterPoster(episode, posterPath, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (IsConcurrentSaveConflict(ex))
+        {
+            runLog.Warning(
+                $"Jellyfin was saving {episode.Path} at the same time, so the poster is installed but not yet selected. The image provider will offer it on the next refresh.",
+                ex);
+            return false;
+        }
+    }
+
     private static async Task RegisterPoster(Episode episode, string posterPath, CancellationToken cancellationToken)
     {
         episode.SetImage(
@@ -1070,7 +1111,9 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     // other writer added already exists and the save succeeds.
     private static async Task SaveEpisodeWithRetry(Episode episode, CancellationToken cancellationToken)
     {
-        const int MaxAttempts = 3;
+        // The competing writer is a library scan or metadata refresh, not this
+        // task, so the wait has to outlast someone else's save rather than a lock.
+        const int MaxAttempts = 5;
 
         for (var attempt = 1; ; attempt++)
         {
@@ -1081,7 +1124,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             }
             catch (Exception ex) when (attempt < MaxAttempts && IsConcurrentSaveConflict(ex))
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(150 * attempt), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(200 * (1 << (attempt - 1))), cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -1131,6 +1174,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             EpisodeOutcome.SkippedReservedSidecar => "skipped-reserved-sidecar",
             EpisodeOutcome.SkippedNoVideoStream => "skipped-no-video-stream",
             EpisodeOutcome.FailedNoFrames => "failed-no-frames",
+            EpisodeOutcome.RegistrationDeferred => "registration-deferred",
             EpisodeOutcome.Failed => "failed",
             _ => outcome.ToString()
         };
@@ -1145,6 +1189,7 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
         SkippedReservedSidecar,
         SkippedNoVideoStream,
         FailedNoFrames,
+        RegistrationDeferred,
         Failed
     }
 
@@ -1227,4 +1272,6 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     }
 
     private readonly record struct FfmpegResult(int ExitCode, string Error);
+
+    private readonly record struct PosterActivation(string PrimaryPosterPath, bool Registered);
 }

@@ -1219,13 +1219,13 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   assert.match(source, /private static IEnumerable<string> GetWitziPosterPaths\(string mediaPath\)/);
   assert.match(source, /return WitziPosterFiles\.GetPosterPaths\(mediaPath\);/);
   assert.match(source, /private string\? FindLegacyWitziPoster\(Episode episode, string mediaPath\)/);
-  assert.match(source, /private async Task<string> ActivatePoster\(/);
+  assert.match(source, /private async Task<PosterActivation> ActivatePoster\(/);
   assert.match(source, /private static string GetPrimaryPosterPath\(string mediaPath\)/);
   assert.match(source, /Path\.GetFileNameWithoutExtension\(mediaPath\) \+ "\.jpg"/);
   assert.match(source, /private static IEnumerable<string> GetProviderPrimarySidecars\(string mediaPath\)/);
   assert.match(source, /name \+ "-witzi-original" \+ extension/);
   assert.match(source, /CopyPosterAtomically\(witziPosterPath, primaryPosterPath\)/);
-  assert.match(source, /await RegisterPoster\(episode, primaryPosterPath/);
+  assert.match(source, /await TryRegisterPoster\(episode, primaryPosterPath, runLog, cancellationToken\)/);
   assert.match(source, /image\.Width == PosterWidth && image\.Height == PosterHeight/);
   assert.doesNotMatch(source, /HasExistingPoster(?:Sidecar)?\(/);
   assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
@@ -1248,6 +1248,15 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   assert.match(source, /RepositoryGate\.Release\(\);/);
   assert.match(source, /await SaveEpisodeWithRetry\(episode, cancellationToken\)/);
   assert.match(source, /attempt < MaxAttempts && IsConcurrentSaveConflict\(ex\)/);
+  // The poster file is fully installed before the write, and both the image
+  // provider and the post-scan pass will select it, so a write that keeps
+  // losing to Jellyfin saving the same item is a deferral, not a lost poster.
+  assert.match(source, /private static async Task<bool> TryRegisterPoster\(/);
+  assert.match(source, /catch \(Exception ex\) when \(IsConcurrentSaveConflict\(ex\)\)/);
+  assert.match(source, /EpisodeOutcome\.RegistrationDeferred => "registration-deferred"/);
+  assert.match(source, /\? EpisodeOutcome\.Generated/);
+  assert.match(source, /\? EpisodeOutcome\.ReactivatedExisting/);
+  assert.match(source, /deferred=\{deferred\}/);
   // Frame extraction must stay parallel; only the database write is serialized.
   assert.match(source, /MaxDegreeOfParallelism = MaxConcurrentEpisodes/);
   assert.match(source, /LogFileName = "witzi-episode-posters\.log"/);

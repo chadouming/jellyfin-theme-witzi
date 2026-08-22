@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "1.1.22.0"
+version: "1.1.23.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,11 +17,11 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Fixes poster registration failing on PostgreSQL. Saving an episode also writes
-  the shared ItemValues rows for its genres, studios, and tags, and Jellyfin
-  looks a row up before inserting it, so two episodes of one series saved at the
-  same time raced to insert the same value and violated the unique index on
-  Type and Value. SQLite never showed this because Jellyfin serializes writes
-  there. Frame extraction stays parallel; the repository write is now serialized
-  and retried when a concurrent library scan writes the same values. Episodes
-  that hit this were reported as failed and kept their previous artwork.
+  Stops reporting a poster as failed when Jellyfin is saving the same episode at
+  the same time. Registering artwork rewrites the whole item, including its
+  provider rows, and Jellyfin offers no narrower save, so a metadata refresh
+  touching the same episode can still win the race after the retries. The poster
+  file and its sidecar are already installed by that point, and both the local
+  image provider and the post-scan pass select it afterwards, so the write now
+  reports a deferral instead of throwing. Those episodes are counted as
+  registration-deferred rather than failed, and the retry backs off further.

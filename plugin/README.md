@@ -18,6 +18,13 @@ violates a unique index and the save fails; SQLite does not show it because
 Jellyfin serializes writes there. The write is also retried when a library scan
 is saving the same values at the same time.
 
+Registering artwork rewrites the whole item, including its provider rows, and
+Jellyfin exposes no narrower save, so a metadata refresh touching the same
+episode can still win that race. The poster file and its sidecar are already
+installed by then, and both the image provider and the post-scan pass select the
+poster afterwards, so the task records `registration-deferred` for that episode
+instead of reporting a failed poster.
+
 Each run collects the full episode-id list once and then works through it, so
 registering artwork cannot reorder rows out from under a partially completed
 pass. Episodes that share one multi-episode video file also share one poster,
