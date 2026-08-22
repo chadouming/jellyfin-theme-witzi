@@ -25,11 +25,12 @@ const requiredTokens = [
 const checkOnly = process.argv.includes('--check');
 const basePath = resolve(projectRoot, 'src/witzi-base.css');
 const base = readFileSync(basePath, 'utf8').replaceAll('\r\n', '\n').trim();
-// Shared with the plugin, which injects it into <head> so the pre-paint rules
-// land before Jellyfin renders instead of whenever Custom CSS arrives.
-const criticalPath = resolve(projectRoot, 'src/witzi-critical.css');
+// Owned by the plugin, which injects it into <head> so the pre-paint rules
+// land before Jellyfin renders instead of whenever Custom CSS arrives. The theme
+// bundle inlines the same file so both delivery paths stay in step.
+const criticalPath = resolve(projectRoot, 'plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-critical.css');
 const critical = readFileSync(criticalPath, 'utf8').replaceAll('\r\n', '\n').trim();
-const posterHelperPath = resolve(projectRoot, 'src/witzi-posters.js');
+const posterHelperPath = resolve(projectRoot, 'plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js');
 const posterHelperOutputPath = resolve(projectRoot, 'dist/witzi-posters.js');
 const posterHelper = `${readFileSync(posterHelperPath, 'utf8').replaceAll('\r\n', '\n').trim()}\n`;
 const problems = [];
@@ -152,12 +153,12 @@ function createBundle(variant) {
 }
 
 assertBalancedBraces(base, 'src/witzi-base.css');
-assertBalancedBraces(critical, 'src/witzi-critical.css');
+assertBalancedBraces(critical, 'plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-critical.css');
 
 try {
   Function(posterHelper);
 } catch (error) {
-  problems.push(`src/witzi-posters.js has invalid JavaScript: ${error.message}`);
+  problems.push(`plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js has invalid JavaScript: ${error.message}`);
 }
 
 for (const variant of variants) {

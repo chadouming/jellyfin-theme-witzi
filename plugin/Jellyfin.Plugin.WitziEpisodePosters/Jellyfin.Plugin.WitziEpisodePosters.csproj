@@ -20,10 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\src\witzi-posters.js">
+    <!-- Web/ mirrors the resource names these are loaded by, so the project builds from
+         its own directory. The theme bundle in scripts/build.mjs reads the same files. -->
+    <EmbeddedResource Include="Web\witzi-posters.js">
       <LogicalName>Jellyfin.Plugin.WitziEpisodePosters.Web.witzi-posters.js</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\..\src\witzi-critical.css">
+    <EmbeddedResource Include="Web\witzi-critical.css">
       <LogicalName>Jellyfin.Plugin.WitziEpisodePosters.Web.witzi-critical.css</LogicalName>
     </EmbeddedResource>
   </ItemGroup>

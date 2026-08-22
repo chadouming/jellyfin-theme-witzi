@@ -1,7 +1,10 @@
 namespace Jellyfin.Plugin.WitziEpisodePosters;
 
 /// <summary>
-/// Locates the dedicated Witzi poster that belongs to an episode's video file.
+/// Describes what a Witzi poster is: where it lives beside an episode's video
+/// file, and the exact size every one is produced at. Both halves of the plugin
+/// and the generation task read these, so a poster is named and recognized the
+/// same way everywhere.
 /// </summary>
 internal static class WitziPosterFiles
 {
@@ -9,6 +12,48 @@ internal static class WitziPosterFiles
     /// Suffix for the reusable Witzi poster kept beside the episode video.
     /// </summary>
     internal const string PosterSuffix = "-witzi.jpg";
+
+    /// <summary>
+    /// Width every Witzi poster is composed at. The exact output size is also the
+    /// signature that identifies an existing file as one of this plugin's posters,
+    /// so the composer and the identity check must read the same number.
+    /// </summary>
+    internal const int PosterWidth = 1000;
+
+    /// <summary>
+    /// Height every Witzi poster is composed at, giving the 2:3 portrait shape
+    /// Jellyfin expects for a Primary image.
+    /// </summary>
+    internal const int PosterHeight = 1500;
+
+    /// <summary>
+    /// Gets the path the poster is installed to and registered as the episode's Primary
+    /// image: Jellyfin's recognized "image beside the video" sidecar name.
+    /// </summary>
+    /// <remarks>
+    /// Both halves of the plugin have to name this file the same way. The scheduled task
+    /// installs the poster here and records it as Primary, while the local image provider
+    /// offers it during a library scan. If they disagreed, the provider would win the scan's
+    /// image merge with one path and the task would re-register the other, so each run would
+    /// undo the previous one and re-save every episode that has a poster.
+    /// </remarks>
+    /// <param name="mediaPath">Path of the episode video file.</param>
+    /// <returns>The installed poster path, or <c>null</c> when none can be formed.</returns>
+    internal static string? GetInstalledPosterPath(string? mediaPath)
+    {
+        if (string.IsNullOrWhiteSpace(mediaPath))
+        {
+            return null;
+        }
+
+        var directory = Path.GetDirectoryName(mediaPath);
+        if (string.IsNullOrEmpty(directory))
+        {
+            return null;
+        }
+
+        return Path.Combine(directory, Path.GetFileNameWithoutExtension(mediaPath) + ".jpg");
+    }
 
     /// <summary>
     /// Gets the paths a Witzi poster for <paramref name="mediaPath"/> may occupy,

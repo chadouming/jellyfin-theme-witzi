@@ -118,7 +118,7 @@ test('waits for Jellyfin to load Custom CSS before starting the helper', async (
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   vm.runInNewContext(source, context);
 
@@ -254,7 +254,7 @@ test('uses only each item own loadable Primary and never overlays inherited artw
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -335,7 +335,7 @@ test('refreshes a regenerated poster from a server message without a reload', as
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -435,7 +435,7 @@ test('keeps the current backdrop visible until a newer backdrop is ready', async
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   await waitFor(() => root.children[0]?.classList.contains('witzi-backdrop-cache'));
 
@@ -597,7 +597,7 @@ test('moves all live detail content into one ribbon panel', async () => {
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   await waitFor(() => ribbon.children.length === 4);
 
@@ -703,7 +703,7 @@ test('ignores unrelated mutation churn and scopes DOM scans to affected features
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 80));
   Object.keys(counts).forEach((key) => { counts[key] = 0; });
@@ -832,7 +832,7 @@ test('defers card and backdrop work while video is playing', async () => {
     setTimeout: unrefTimeout
   };
 
-  const source = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, context);
   await new Promise((resolve) => setTimeout(resolve, 80));
   Object.keys(counts).forEach((key) => { counts[key] = 0; });
@@ -952,7 +952,7 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
 
 test('anchors series artwork and Next Up beside ribbon-first scrolling content', async () => {
   const css = await readFile(new URL('../src/witzi-base.css', import.meta.url), 'utf8');
-  const helper = await readFile(new URL('../src/witzi-posters.js', import.meta.url), 'utf8');
+  const helper = await readFile(new URL('../plugin/Jellyfin.Plugin.WitziEpisodePosters/Web/witzi-posters.js', import.meta.url), 'utf8');
 
   assert.match(css, /--witzi-theme-active:\s*1;/);
   assert.match(helper, /function startWhenThemeIsReady\(\)/);
@@ -1179,24 +1179,49 @@ test('anchors series artwork and Next Up beside ribbon-first scrolling content',
   assert.doesNotMatch(helper, /witzi-(?:poster-pending|native-fallback|no-poster-card)/);
 });
 
-test('covers every episode once and writes task diagnostics to a dedicated log', async () => {
-  const source = await readFile(
-    new URL(
-      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/GenerateEpisodePostersTask.cs',
-      import.meta.url
-    ),
-    'utf8'
+// The task orchestrates; the poster work lives beside it in Posters/. Assertions
+// about a specific decision read the file that makes it, and everything else
+// reads the plugin as a whole so moving code between these files stays free.
+const PLUGIN_FILES = {
+  task: 'ScheduledTasks/GenerateEpisodePostersTask.cs',
+  inspector: 'Posters/PosterInspector.cs',
+  activator: 'Posters/PosterActivator.cs',
+  sidecars: 'Posters/PosterSidecars.cs',
+  paths: 'Posters/PosterPaths.cs',
+  composer: 'Posters/PosterComposer.cs',
+  runLog: 'Posters/PosterRunLog.cs',
+  shared: 'WitziPosterFiles.cs'
+};
+
+async function readPluginSources() {
+  const entries = await Promise.all(
+    Object.entries(PLUGIN_FILES).map(async ([key, path]) => [
+      key,
+      await readFile(
+        new URL(`../plugin/Jellyfin.Plugin.WitziEpisodePosters/${path}`, import.meta.url),
+        'utf8'
+      )
+    ])
   );
-  const processEpisode = source.slice(
-    source.indexOf('private async Task<EpisodeOutcome> ProcessEpisode'),
-    source.indexOf('private static string? GetIneligibleReason')
+  const sources = Object.fromEntries(entries);
+  sources.all = entries.map(([, text]) => text).join('\n');
+  return sources;
+}
+
+test('covers every episode once and writes task diagnostics to a dedicated log', async () => {
+  const sources = await readPluginSources();
+  const source = sources.all;
+  const task = sources.task;
+  const processEpisode = task.slice(
+    task.indexOf('private async Task<EpisodeOutcome> ProcessEpisode'),
+    task.indexOf('private static string OutcomeLabel')
   );
 
   assert.match(source, /IncludeItemTypes = \[BaseItemKind\.Episode\]/);
   // One unpaged id snapshot. A StartIndex walk over an unsorted item query can
   // skip episodes once registering artwork rewrites the rows being paged.
-  assert.match(source, /_libraryManager\.GetItemIds\(query\)/);
-  assert.match(source, /_libraryManager\.GetItemById<Episode>\(episodeId\)/);
+  assert.match(task, /_libraryManager\.GetItemIds\(BuildEpisodeQuery\(\)\)/);
+  assert.match(task, /_libraryManager\.GetItemById<Episode>\(episodeId\)/);
   assert.doesNotMatch(source, /query\.StartIndex|QueryPageSize|GetCount\(query\)/);
   assert.match(source, /IApplicationPaths applicationPaths/);
   assert.match(source, /private const int MaxConcurrentEpisodes = 4;/);
@@ -1207,26 +1232,32 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   assert.match(source, /private async Task<EpisodeOutcome> ProcessEpisode\(/);
   // Multi-episode files share one video, so one poster path is built once and
   // reused rather than raced over by concurrent workers.
-  assert.match(source, /posterGates\.GetOrAdd\(NormalizePath\(posterPath\)/);
+  assert.match(task, /posterGates\.GetOrAdd\(PosterPaths\.NormalizePath\(posterPath\)/);
   assert.match(source, /await gate\.WaitAsync\(cancellationToken\)/);
   assert.match(source, /gate\.Release\(\);/);
   assert.ok(processEpisode.indexOf('FindExistingWitziPoster(episode, mediaPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
   assert.ok(processEpisode.indexOf('IsPersistentWitziPrimary(episode, mediaPath, existingPosterPath)') < processEpisode.indexOf('GetVideoStream(episode)'));
-  assert.ok(processEpisode.indexOf('ActivatePoster(') < processEpisode.indexOf('GetVideoStream(episode)'));
+  assert.ok(processEpisode.indexOf('PosterActivator.Activate(') < processEpisode.indexOf('GetVideoStream(episode)'));
   // The poster location is shared with the image provider so the two cannot
   // disagree about where a Witzi poster lives.
   assert.match(source, /WitziPosterFiles\.GetPosterPaths\(mediaPath\)\[0\]/);
-  assert.match(source, /private static IEnumerable<string> GetWitziPosterPaths\(string mediaPath\)/);
-  assert.match(source, /return WitziPosterFiles\.GetPosterPaths\(mediaPath\);/);
-  assert.match(source, /private string\? FindLegacyWitziPoster\(Episode episode, string mediaPath\)/);
-  assert.match(source, /private async Task<PosterActivation> ActivatePoster\(/);
-  assert.match(source, /private static string GetPrimaryPosterPath\(string mediaPath\)/);
+  assert.match(sources.inspector, /WitziPosterFiles\.GetPosterPaths\(mediaPath\)/);
+  assert.match(sources.inspector, /private string\? FindLegacyWitziPoster\(Episode episode, string mediaPath\)/);
+  assert.match(sources.activator, /internal static async Task<PosterActivationResult> Activate\(/);
+  assert.match(sources.sidecars, /internal static string GetPrimaryPosterPath\(string mediaPath\)/);
   assert.match(source, /Path\.GetFileNameWithoutExtension\(mediaPath\) \+ "\.jpg"/);
-  assert.match(source, /private static IEnumerable<string> GetProviderPrimarySidecars\(string mediaPath\)/);
+  assert.match(sources.sidecars, /internal static IEnumerable<string> GetProviderPrimarySidecars\(string mediaPath\)/);
   assert.match(source, /name \+ "-witzi-original" \+ extension/);
   assert.match(source, /CopyPosterAtomically\(witziPosterPath, primaryPosterPath\)/);
   assert.match(source, /await TryRegisterPoster\(episode, primaryPosterPath, runLog, cancellationToken\)/);
-  assert.match(source, /image\.Width == PosterWidth && image\.Height == PosterHeight/);
+  assert.match(sources.shared, /PosterWidth = 1000;/);
+  assert.match(sources.shared, /PosterHeight = 1500;/);
+  assert.match(
+    sources.inspector,
+    /image\.Width == WitziPosterFiles\.PosterWidth\s*&&\s*image\.Height == WitziPosterFiles\.PosterHeight/
+  );
+  assert.match(sources.composer, /\$"\{WitziPosterFiles\.PosterWidth\}:\{WitziPosterFiles\.PosterHeight\}"/);
+  assert.doesNotMatch(sources.composer, /scale=1000:1500/);
   assert.doesNotMatch(source, /HasExistingPoster(?:Sidecar)?\(/);
   assert.match(source, /File\.Move\(temporaryPath, outputPath, false\);/);
   // A short read is not a difference. Treating it as one sent intact posters
@@ -1324,7 +1355,7 @@ test('restores Witzi posters that a library scan replaced', async () => {
 
   const body = task.slice(
     task.indexOf('internal async Task ReassertExistingPostersAsync'),
-    task.indexOf('private async Task<EpisodeOutcome> ProcessEpisode')
+    task.indexOf('private static InternalItemsQuery BuildEpisodeQuery')
   );
   // A scan must never trigger FFmpeg: an episode with no existing poster is
   // skipped rather than generated.
@@ -1332,7 +1363,7 @@ test('restores Witzi posters that a library scan replaced', async () => {
   assert.doesNotMatch(body, /ExtractFrame|WritePoster|GetVideoStream/);
   assert.match(body, /if \(existingPosterPath is null\)/);
   assert.match(body, /IsPersistentWitziPrimary\(episode, mediaPath, existingPosterPath\)/);
-  assert.match(body, /await ActivatePoster\(/);
+  assert.match(body, /await PosterActivator\.Activate\(/);
   // Its own log, so it cannot clobber the generation diagnostics.
   assert.match(body, /PosterRunLog\.Create\(_applicationPaths\.LogDirectoryPath, ScanLogFileName\)/);
   assert.match(task, /ScanLogFileName = "witzi-episode-posters-scan\.log"/);
