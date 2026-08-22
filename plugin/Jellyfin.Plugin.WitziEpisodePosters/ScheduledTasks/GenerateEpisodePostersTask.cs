@@ -29,6 +29,16 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
     private const int MaxConcurrentEpisodes = 4;
     private static readonly double[] FramePositions = [0.18d, 0.50d, 0.82d];
     private static readonly string[] PrimarySidecarExtensions = BuildPrimarySidecarExtensions();
+
+    // Saving an item writes its genres, studios, and tags as shared ItemValues
+    // rows, and Jellyfin looks a row up before inserting it. Two episodes of one
+    // series saved at the same time therefore race to insert the same value and
+    // trip the unique index on (Type, Value). SQLite never showed it because
+    // Jellyfin serializes writes there; PostgreSQL runs them concurrently.
+    // Frame extraction is the expensive part and stays parallel. Only the
+    // repository write is serialized, and it is shared by every instance of this
+    // task so the post-scan pass cannot race the generation run either.
+    private static readonly SemaphoreSlim RepositoryGate = new(1, 1);
     private static readonly string[] BorderColorPalette =
     [
         "CBA6F7", // Mauve
@@ -1043,7 +1053,55 @@ public sealed class GenerateEpisodePostersTask : IScheduledTask
             },
             0);
 
-        await episode.UpdateToRepositoryAsync(ItemUpdateType.ImageUpdate, cancellationToken).ConfigureAwait(false);
+        await RepositoryGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await SaveEpisodeWithRetry(episode, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            RepositoryGate.Release();
+        }
+    }
+
+    // The gate removes this task from racing itself, but a library scan can be
+    // saving the same shared values at the same time and nothing here can
+    // serialize that. The losing insert is retried, by which point the value the
+    // other writer added already exists and the save succeeds.
+    private static async Task SaveEpisodeWithRetry(Episode episode, CancellationToken cancellationToken)
+    {
+        const int MaxAttempts = 3;
+
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await episode.UpdateToRepositoryAsync(ItemUpdateType.ImageUpdate, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (attempt < MaxAttempts && IsConcurrentSaveConflict(ex))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(150 * attempt), cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static bool IsConcurrentSaveConflict(Exception exception)
+    {
+        // The plugin does not reference Entity Framework, so the conflict is
+        // recognized by name and by the constraint the database reports rather
+        // than by catching DbUpdateException directly.
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.GetType().Name.Contains("DbUpdateException", StringComparison.Ordinal)
+                || current.Message.Contains("IX_ItemValues_Type_Value", StringComparison.Ordinal)
+                || current.Message.Contains("duplicate key value", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void TryDelete(string path)

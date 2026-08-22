@@ -1240,6 +1240,16 @@ test('covers every episode once and writes task diagnostics to a dedicated log',
   // An untouched Primary is confirmed by metadata instead of a full re-read.
   assert.match(source, /IsUnmodifiedSinceRegistration\(primaryPosterPath, witziPosterPath, primary\)/);
   assert.match(source, /AutoFlush = false/);
+  // Saving an item writes shared ItemValues rows for its genres, studios and
+  // tags. Two episodes of one series saved at once race to insert the same
+  // value and trip the unique index, which PostgreSQL does not serialize away.
+  assert.match(source, /private static readonly SemaphoreSlim RepositoryGate = new\(1, 1\);/);
+  assert.match(source, /await RepositoryGate\.WaitAsync\(cancellationToken\)/);
+  assert.match(source, /RepositoryGate\.Release\(\);/);
+  assert.match(source, /await SaveEpisodeWithRetry\(episode, cancellationToken\)/);
+  assert.match(source, /attempt < MaxAttempts && IsConcurrentSaveConflict\(ex\)/);
+  // Frame extraction must stay parallel; only the database write is serialized.
+  assert.match(source, /MaxDegreeOfParallelism = MaxConcurrentEpisodes/);
   assert.match(source, /LogFileName = "witzi-episode-posters\.log"/);
   assert.match(source, /PosterRunLog\.Create\(_applicationPaths\.LogDirectoryPath\)/);
   assert.match(source, /FileMode\.Create/);

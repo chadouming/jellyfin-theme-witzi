@@ -10,6 +10,13 @@ new poster receives three distinct, randomly selected frame-border colors from
 the Witzi/Catppuccin palette. The scheduled task always uses at most four
 concurrent episode workers, regardless of Jellyfin's **Parallel image encoding
 limit**, to avoid exhausting memory or process threads during large AV1 runs.
+Only frame extraction and poster composition run in parallel. Registering the
+result is serialized, because saving an episode also writes the shared
+`ItemValues` rows for its genres, studios, and tags, and concurrent saves of two
+episodes from one series race to insert the same value. On PostgreSQL that
+violates a unique index and the save fails; SQLite does not show it because
+Jellyfin serializes writes there. The write is also retried when a library scan
+is saving the same values at the same time.
 
 Each run collects the full episode-id list once and then works through it, so
 registering artwork cannot reorder rows out from under a partially completed
