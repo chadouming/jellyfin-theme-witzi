@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "1.1.25.0",
+        "changelog": "Restores the injected theme, which Jellyfin Web was overriding wholesale. The plugin wrote the bundle into <head>, but Jellyfin installs its own palette after anything head already carries: MUI writes a :root block of --jf-palette-* values into head as the bundle boots, and themes/<id>/theme.css arrives as a <link> React renders inside #reactRoot. The theme's :root bridge ties with both on specificity and lost every tie, so picking a palette changed nothing on screen. The bundle now goes at the end of <body>, which nothing Jellyfin renders comes after, and an upgrade evicts the copy an earlier release left in head. Jellyfin Web loads its bundles with defer, so the theme is still in place for the first paint. It now also outranks the Custom CSS field, so overrides pasted there need !important.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.25/Witzi.Episode.Posters_1.1.25.0.zip",
+        "checksum": "59812ac5cbdf58b78e73ba3b3bd2b81e",
+        "timestamp": "2026-08-29T04:18:42Z"
+      },
+      {
         "version": "1.1.24.0",
         "changelog": "Serves the theme from Jellyfin Web instead of the Custom CSS field, and stops the page settling in front of the viewer. Jellyfin renders Custom CSS from a React component gated on the branding request, so a theme pasted there cannot apply until after the first paint: the page shows stock Jellyfin colours and landscape home rows, then snaps. The plugin now embeds the six compiled palettes and writes the selected one into index.html beside the pre-paint layer, with a configuration page to pick it and no restart needed to change it. The pre-paint layer also stops revealing content twice: its reveal was a keyframe animation starting from zero, so cards the failsafe had already shown blinked out and faded back in once the helper decided them. Library posters no longer turn a flat colour on hover either, which came from the React card's full-size overlay link inheriting the artwork frame's surface colour.",
         "targetAbi": "12.0.0.0",

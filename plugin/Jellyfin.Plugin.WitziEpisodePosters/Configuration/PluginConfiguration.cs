@@ -15,8 +15,10 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// Jellyfin renders the Custom CSS field from a React component that waits on the branding
     /// request, so a theme pasted there cannot reach the browser until after the first paint: the
     /// page shows stock Jellyfin colours and landscape home rows, then snaps to Witzi. Serving the
-    /// bundle from index.html removes that. Turn this off to go back to Custom CSS delivery, or to
-    /// run a hand-edited copy of the theme.
+    /// bundle from index.html removes that. The bundle is written at the end of &lt;body&gt;, which is the
+    /// only place it outranks the palette Jellyfin Web installs at runtime, so it also outranks the
+    /// Custom CSS field. Turn this off to go back to Custom CSS delivery, or to run a hand-edited
+    /// copy of the theme.
     /// </remarks>
     public bool InjectTheme { get; set; } = true;
 

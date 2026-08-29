@@ -1449,10 +1449,25 @@ test('keeps a current injected helper in place around other plugin scripts', asy
   assert.match(source, /TryApplyBlock\(ref document, HelperBlockPattern, helperInjection, "<\/body>", indexPath\)/);
   assert.match(source, /Web\.witzi-critical\.css/);
   assert.match(source, /critical\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
-  // The theme goes in head for the same reason the pre-paint layer does: the
-  // Custom CSS field cannot deliver it until after Jellyfin's first paint.
+  // The theme goes at the end of body. MUI writes Jellyfin Web's --jf-palette-*
+  // block into head as the bundle boots and themes/<id>/theme.css arrives as a
+  // <link> inside #reactRoot, so a copy in head ties with both and loses.
   assert.match(source, /private static readonly Regex ThemeBlockPattern/);
-  assert.match(source, /StyleBlock\(ThemeStartMarker, ThemeEndMarker, theme\), "<\/head>", indexPath\)/);
+  assert.match(source, /StyleBlock\(ThemeStartMarker, ThemeEndMarker, theme\), themeAnchor, indexPath\)/);
+  // The helper is an inline script that runs as soon as the parser reaches it,
+  // and it waits on the theme's --witzi-theme-active, so the theme anchors to
+  // the helper's marker instead of </body>: an upgrade already has the helper
+  // block in place, and a </body> anchor would insert the theme after it.
+  assert.match(
+    source,
+    /var themeAnchor = document\.Contains\(HelperStartMarker, StringComparison\.Ordinal\)\s*\?\s*HelperStartMarker\s*:\s*"<\/body>";/
+  );
+  // Releases through 1.1.24 wrote it into head, and TryApplyBlock updates a
+  // block where it already lives, so an upgrade has to evict that one first.
+  assert.match(source, /changed \|= TryEvictThemeFromHead\(ref document\);/);
+  assert.match(source, /private bool TryEvictThemeFromHead\(ref string document\)/);
+  assert.match(source, /document\.LastIndexOf\("<\/head>", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(source, /if \(!existing\.Success \|\| existing\.Index > headEnd\)/);
   // Turning theme injection off has to take the stylesheet back out, or the
   // Custom CSS fallback would keep fighting a copy nothing maintains.
   assert.match(source, /TryRemoveBlock\(ref document, ThemeBlockPattern\)/);

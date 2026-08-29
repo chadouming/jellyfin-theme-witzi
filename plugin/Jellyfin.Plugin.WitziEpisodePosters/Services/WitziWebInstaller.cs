@@ -90,14 +90,36 @@ public sealed class WitziWebInstaller
             // already assembled itself in front of the viewer.
             var changed = TryApplyBlock(ref document, CriticalBlockPattern, criticalInjection, "</head>", indexPath);
 
-            // The theme goes in head for the same reason, and ahead of the
-            // Custom CSS field's <style> in document order, so a theme still
-            // pasted there keeps overriding this copy rather than fighting it.
+            changed |= TryApplyBlock(ref document, HelperBlockPattern, helperInjection, "</body>", indexPath);
+
+            // The theme goes at the end of body rather than in head. Jellyfin
+            // Web installs its own palette after anything head already carries:
+            // MUI writes a :root block of --jf-palette-* values into head as
+            // the bundle boots, and themes/<id>/theme.css arrives as a <link>
+            // React renders inside #reactRoot. The theme's :root bridge ties
+            // with both on specificity, so from head it loses every tie and the
+            // page keeps looking untouched. Nothing Jellyfin renders comes after
+            // it here. Jellyfin Web loads its bundles with defer, so the parser
+            // still reaches this block before the app boots and the theme is in
+            // place for the first paint either way.
+            //
+            // It anchors to the helper's opening marker rather than </body>.
+            // The helper is an inline script that runs the moment the parser
+            // reaches it, and its first act is to look for the theme's
+            // --witzi-theme-active, so the theme has to be parsed first. A
+            // </body> anchor gets that wrong on an upgrade, where the helper
+            // block is already in place and only the theme is being inserted.
+            var themeAnchor = document.Contains(HelperStartMarker, StringComparison.Ordinal)
+                ? HelperStartMarker
+                : "</body>";
+
+            // Releases through 1.1.24 wrote the theme into head, and
+            // TryApplyBlock updates a block where it already lives, so one left
+            // there is dropped first and reinstalled at the new anchor.
+            changed |= TryEvictThemeFromHead(ref document);
             changed |= theme is null
                 ? TryRemoveBlock(ref document, ThemeBlockPattern)
-                : TryApplyBlock(ref document, ThemeBlockPattern, StyleBlock(ThemeStartMarker, ThemeEndMarker, theme), "</head>", indexPath);
-
-            changed |= TryApplyBlock(ref document, HelperBlockPattern, helperInjection, "</body>", indexPath);
+                : TryApplyBlock(ref document, ThemeBlockPattern, StyleBlock(ThemeStartMarker, ThemeEndMarker, theme), themeAnchor, indexPath);
 
             if (!changed)
             {
@@ -170,6 +192,27 @@ public sealed class WitziWebInstaller
         }
 
         return theme;
+    }
+
+    // Drops a theme block an earlier release left in <head> so InstallAsync can
+    // reinstall it before </body>. A block already past </head> is left alone:
+    // TryApplyBlock updates it where it sits, which is what keeps injections
+    // owned by other plugins in their original order.
+    private bool TryEvictThemeFromHead(ref string document)
+    {
+        var headEnd = document.LastIndexOf("</head>", StringComparison.OrdinalIgnoreCase);
+        if (headEnd < 0)
+        {
+            return false;
+        }
+
+        var existing = ThemeBlockPattern.Match(document);
+        if (!existing.Success || existing.Index > headEnd)
+        {
+            return false;
+        }
+
+        return TryRemoveBlock(ref document, ThemeBlockPattern);
     }
 
     private bool TryRemoveBlock(ref string document, Regex blockPattern)
