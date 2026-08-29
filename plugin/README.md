@@ -90,25 +90,43 @@ the detail ribbon and enables portrait artwork on supported home rows without
 depending on the JavaScript Injector plugin. JavaScript is required because CSS
 cannot move live DOM nodes, replace episode image requests, or coordinate
 cached backdrop transitions, and the separate injector targets Jellyfin 10.11
-rather than this plugin's Jellyfin 12 ABI. The Jellyfin service needs write
-access to the web client's `index.html`. The replacement is staged beside the
-target and renamed where the directory allows new files, because that cannot
-leave a truncated web client behind if the write is interrupted. Where the
-directory refuses new files, which several container images do, the task warns
-and rewrites `index.html` in place instead. If `index.html` itself is not
-writable, the startup task logs an error and the helper can still be installed
-manually.
+rather than this plugin's Jellyfin 12 ABI.
+
+Both blocks are added to the `index.html` response as Jellyfin serves it, by
+ASP.NET middleware the plugin registers with the host through
+`IPluginServiceRegistrator`. Nothing is written to the web folder, so this needs
+no write access to it and survives a Jellyfin Web upgrade replacing the file. The
+middleware touches only the web shell request (`/web`, `/web/`, and
+`/web/index.html`, base-url prefix included) and only a `GET` returning a 200
+`text/html` body; it drops `Accept-Encoding`, `Range`, and `If-Range` on the way
+in so the body it reads is whole and uncompressed, and on any failure it serves
+the original bytes rather than throwing into the pipeline. A document that
+already carries the current blocks is passed through byte for byte, validators
+intact.
+
+Turning **Write the assets into index.html instead of serving them** on in the
+configuration disables that and edits the file on disk instead, for a server
+where something other than Jellyfin serves the web folder. The Jellyfin service
+then needs write access to the web client's `index.html`. The replacement is
+staged beside the target and renamed where the directory allows new files,
+because that cannot leave a truncated web client behind if the write is
+interrupted. Where the directory refuses new files, which several container
+images do, the task warns and rewrites `index.html` in place instead. While the
+middleware is on, the startup task instead clears any blocks the on-disk path
+left behind, so exactly one delivery path owns the page.
 
 The plugin also carries the theme itself. Jellyfin renders the Custom CSS field
 from a React component gated on the branding request, so a theme pasted there
 cannot reach the browser until after the first paint: the page shows stock
 Jellyfin colours and landscape home rows, then snaps to Witzi. The six compiled
-palettes are embedded in the assembly, and the selected one is written into
-`<head>` in the same pass that installs the pre-paint layer and the helper. Pick
-it under **Dashboard -> Plugins -> Witzi Episode Posters**; saving rewrites
-`index.html`, so a palette change needs no restart. Turning **Serve the theme
-from Jellyfin Web** off takes the stylesheet back out and returns to Custom CSS
-delivery. This also puts `--witzi-theme-active` in front of the helper's first
+palettes are embedded in the assembly, and the selected one is served at the end
+of `<body>` in the same pass that adds the pre-paint layer and the helper --
+`<head>` loses every specificity tie to the palette Jellyfin Web installs at
+runtime, so a copy there leaves the page looking untouched. Pick the palette
+under **Dashboard -> Plugins -> Witzi Episode Posters**; the middleware reads the
+configuration per request, so a palette applies on the next page load with no
+restart. Turning **Serve the theme from Jellyfin Web** off takes the stylesheet
+back out and returns to Custom CSS delivery. This also puts `--witzi-theme-active` in front of the helper's first
 check, which is what the helper waits for before it starts.
 
 The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC5

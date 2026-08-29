@@ -1428,32 +1428,29 @@ test('serves every built palette from the plugin under its bundle name', async (
   );
 });
 
-test('keeps a current injected helper in place around other plugin scripts', async () => {
-  const source = await readFile(
-    new URL(
-      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/Services/WitziWebInstaller.cs',
-      import.meta.url
-    ),
-    'utf8'
-  );
+const pluginSource = (relativePath) => readFile(
+  new URL(`../plugin/Jellyfin.Plugin.WitziEpisodePosters/${relativePath}`, import.meta.url),
+  'utf8'
+);
 
-  assert.match(source, /private static readonly Regex HelperBlockPattern/);
+test('keeps a current injected block in place around other plugin scripts', async () => {
+  const source = await pluginSource('Services/WitziIndexDocument.cs');
+
+  assert.match(source, /private static readonly Regex _helperBlockPattern/);
   assert.match(source, /existingBlocks\.Count == 1/);
   assert.match(source, /string\.Equals\(existingBlocks\[0\]\.Value, injection, StringComparison\.Ordinal\)/);
   assert.match(source, /blockPattern\.Replace\(/);
   assert.match(source, /if \(replacementWritten\)/);
   // The pre-paint rules only work ahead of Jellyfin's first render, so they
   // go in head. Custom CSS arrives long after a detail page has assembled.
-  assert.match(source, /private static readonly Regex CriticalBlockPattern/);
-  assert.match(source, /TryApplyBlock\(ref document, CriticalBlockPattern, criticalInjection, "<\/head>", indexPath\)/);
-  assert.match(source, /TryApplyBlock\(ref document, HelperBlockPattern, helperInjection, "<\/body>", indexPath\)/);
-  assert.match(source, /Web\.witzi-critical\.css/);
-  assert.match(source, /critical\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(source, /private static readonly Regex _criticalBlockPattern/);
+  assert.match(source, /TryApplyBlock\(ref document, _criticalBlockPattern, criticalInjection, "<\/head>", logger, target\)/);
+  assert.match(source, /TryApplyBlock\(ref document, _helperBlockPattern, helperInjection, "<\/body>", logger, target\)/);
   // The theme goes at the end of body. MUI writes Jellyfin Web's --jf-palette-*
   // block into head as the bundle boots and themes/<id>/theme.css arrives as a
   // <link> inside #reactRoot, so a copy in head ties with both and loses.
-  assert.match(source, /private static readonly Regex ThemeBlockPattern/);
-  assert.match(source, /StyleBlock\(ThemeStartMarker, ThemeEndMarker, theme\), themeAnchor, indexPath\)/);
+  assert.match(source, /private static readonly Regex _themeBlockPattern/);
+  assert.match(source, /StyleBlock\(ThemeStartMarker, ThemeEndMarker, assets\.Theme\), themeAnchor, logger, target\)/);
   // The helper is an inline script that runs as soon as the parser reaches it,
   // and it waits on the theme's --witzi-theme-active, so the theme anchors to
   // the helper's marker instead of </body>: an upgrade already has the helper
@@ -1462,18 +1459,104 @@ test('keeps a current injected helper in place around other plugin scripts', asy
     source,
     /var themeAnchor = document\.Contains\(HelperStartMarker, StringComparison\.Ordinal\)\s*\?\s*HelperStartMarker\s*:\s*"<\/body>";/
   );
-  // Releases through 1.1.24 wrote it into head, and TryApplyBlock updates a
+  // Releases through 1.1.25 wrote it into head, and TryApplyBlock updates a
   // block where it already lives, so an upgrade has to evict that one first.
   assert.match(source, /changed \|= TryEvictThemeFromHead\(ref document\);/);
-  assert.match(source, /private bool TryEvictThemeFromHead\(ref string document\)/);
+  assert.match(source, /private static bool TryEvictThemeFromHead\(ref string document\)/);
   assert.match(source, /document\.LastIndexOf\("<\/head>", StringComparison\.OrdinalIgnoreCase\)/);
   assert.match(source, /if \(!existing\.Success \|\| existing\.Index > headEnd\)/);
   // Turning theme injection off has to take the stylesheet back out, or the
   // Custom CSS fallback would keep fighting a copy nothing maintains.
-  assert.match(source, /TryRemoveBlock\(ref document, ThemeBlockPattern\)/);
-  assert.match(source, /theme\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(source, /TryRemoveBlock\(ref document, _themeBlockPattern\)/);
+  // Handing delivery back to the middleware has to clear every block the
+  // on-disk path left behind, or its palette outlives the release that wrote it.
+  assert.match(source, /public static bool TryRemoveAll\(ref string document\)/);
+  for (const pattern of ['_criticalBlockPattern', '_themeBlockPattern', '_helperBlockPattern']) {
+    assert.match(source, new RegExp(`TryRemoveBlock\\(ref document, ${pattern}\\)`));
+  }
   assert.doesNotMatch(source, /withoutPreviousHelper/);
   assert.doesNotMatch(source, /Regex\.Replace\(current, markerPattern, string\.Empty/);
+});
+
+test('refuses an embedded asset that would break out of its own tag', async () => {
+  const source = await pluginSource('Services/WitziWebAssets.cs');
+
+  // An inline <script> or <style> ends at the first closing tag in its source,
+  // so one inside an asset would cut the block short and spill the rest into
+  // the page as markup. Both delivery paths build on this one loader.
+  assert.match(source, /Web\.witzi-critical\.css/);
+  assert.match(source, /Web\.witzi-posters\.js/);
+  assert.match(source, /helper\.Contains\("<\/script", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(source, /critical\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(source, /theme\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
+  // Turning the theme off must not fall back to a palette; it has to yield no
+  // theme at all, which is what makes TryApply remove the block.
+  assert.match(source, /configuration\.InjectTheme\s*\?\s*WitziPalettes\.Normalize\(configuration\.Palette\)\s*:\s*null/);
+});
+
+test('serves the web assets with the index.html response', async () => {
+  const filter = await pluginSource('Services/WitziIndexInjectionStartupFilter.cs');
+  const registrator = await pluginSource('PluginServiceRegistrator.cs');
+  const configuration = await pluginSource('Configuration/PluginConfiguration.cs');
+  const configPage = await pluginSource('Configuration/configPage.html');
+
+  // Writing index.html only reaches the browser where the service account can
+  // write the web folder, and a Jellyfin Web upgrade replaces the file. Serving
+  // the blocks with the response has neither limit, so it is the default path.
+  assert.match(registrator, /public sealed class PluginServiceRegistrator : IPluginServiceRegistrator/);
+  assert.match(registrator, /serviceCollection\.AddSingleton<IStartupFilter, WitziIndexInjectionStartupFilter>\(\);/);
+  assert.match(filter, /public sealed class WitziIndexInjectionStartupFilter : IStartupFilter/);
+  assert.match(configuration, /public bool DisableIndexMiddleware \{ get; set; \}/);
+  assert.doesNotMatch(configuration, /public bool DisableIndexMiddleware \{ get; set; \} = true;/);
+  assert.match(configPage, /id="WitziDisableIndexMiddleware"/);
+  assert.match(configPage, /config\.DisableIndexMiddleware = document\.querySelector\('#WitziDisableIndexMiddleware'\)\.checked;/);
+
+  // Only the web shell, and only a GET: buffering a HEAD would compute a
+  // Content-Length against an empty downstream body.
+  assert.match(filter, /path\.EndsWith\("\/web\/index\.html", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(filter, /path\.EndsWith\("\/web\/", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(filter, /path\.Equals\("\/web", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(filter, /!HttpMethods\.IsGet\(context\.Request\.Method\)/);
+
+  // The response has to arrive uncompressed and whole to be rewritten: a 206
+  // would otherwise pass through un-injected with a wrong total length.
+  for (const header of ['Accept-Encoding', 'Range', 'If-Range']) {
+    assert.match(filter, new RegExp(`context\\.Request\\.Headers\\.Remove\\("${header}"\\);`));
+  }
+  assert.match(filter, /app\.Use\(InvokeAsync\);\s*\n\s*next\(app\);/);
+
+  // The middleware reads Configuration per request, which is what makes a
+  // palette apply on the next page load with no restart and no file written.
+  assert.match(filter, /var configuration = Plugin\.Instance\?\.Configuration;/);
+  assert.match(filter, /configuration\.DisableIndexMiddleware/);
+  assert.match(filter, /WitziIndexDocument\.TryApply\(ref document, assets, _logger, /);
+
+  // Never break index.html: only a 200 text/html body is rewritten, a
+  // downstream throw discards the partial buffer instead of committing a
+  // truncated 200, and anything else serves the original bytes.
+  assert.match(filter, /context\.Response\.StatusCode == 200/);
+  assert.match(filter, /ContentType\?\.Contains\("text\/html", StringComparison\.OrdinalIgnoreCase\)/);
+  assert.match(filter, /context\.Response\.Body = originalBody;\s*\n\s*throw;/);
+  assert.match(filter, /if \(!changed\)[\s\S]{0,400}buffer\.CopyToAsync\(originalBody\)/);
+  assert.match(filter, /catch \(Exception ex\) when \(ex is not OperationCanceledException\)/);
+
+  // A rewritten body invalidates the static handler's validators, and range
+  // requests are not supported on it.
+  assert.match(filter, /context\.Response\.ContentLength = bytes\.Length;/);
+  for (const header of ['ETag', 'Last-Modified', 'Accept-Ranges']) {
+    assert.match(filter, new RegExp(`context\\.Response\\.Headers\\.Remove\\("${header}"\\);`));
+  }
+});
+
+test('reconciles index.html on disk without truncating it', async () => {
+  const source = await pluginSource('Services/WitziWebInstaller.cs');
+
+  // While the middleware owns delivery the file has to carry nothing, or a
+  // block written by 1.1.24 or 1.1.25 keeps its palette in the document.
+  assert.match(source, /if \(!configuration\.DisableIndexMiddleware\)/);
+  assert.match(source, /WitziIndexDocument\.TryRemoveAll\(ref document\)/);
+  assert.match(source, /WitziIndexDocument\.TryApply\(ref document, assets, _logger, indexPath\)/);
+
   // Jellyfin Web cannot start without index.html, so it is staged and renamed
   // rather than truncated in place by a write that dies partway through.
   assert.match(source, /await WriteIndex\(indexPath, document, cancellationToken\)/);

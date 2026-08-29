@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.WitziEpisodePosters.ScheduledTasks;
 
 /// <summary>
-/// Installs the embedded Witzi pre-paint layer, theme, and browser helper into Jellyfin Web at startup.
+/// Keeps Jellyfin Web's index.html on disk in step with the plugin configuration at startup.
 /// </summary>
 public sealed class InstallWitziWebHelperTask : IScheduledTask
 {
@@ -32,7 +32,7 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
     public string Key => "InstallWitziWebHelper";
 
     /// <inheritdoc />
-    public string Description => "Installs the embedded Witzi pre-paint layer, theme stylesheet, and browser helper into Jellyfin Web for detail-ribbon layout and portrait home cards.";
+    public string Description => "Reconciles Jellyfin Web's index.html with the Witzi configuration. The pre-paint layer, theme stylesheet, and browser helper are normally served with the index.html response, so this removes anything an earlier release wrote into the file; it writes them there instead when request-time injection is turned off.";
 
     /// <inheritdoc />
     public string Category => "Startup Services";
@@ -55,7 +55,7 @@ public sealed class InstallWitziWebHelperTask : IScheduledTask
             // constructed the plugin. Defaults keep the task useful rather than
             // silent if that order ever changes.
             var configuration = Plugin.Instance?.Configuration ?? new PluginConfiguration();
-            await _installer.InstallAsync(configuration, cancellationToken).ConfigureAwait(false);
+            await _installer.SyncAsync(configuration, cancellationToken).ConfigureAwait(false);
         }
         finally
         {

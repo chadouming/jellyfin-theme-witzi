@@ -26,4 +26,17 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the palette served pre-paint. See <see cref="WitziPalettes.All"/>.
     /// </summary>
     public string Palette { get; set; } = WitziPalettes.Default;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the request-time injection of the Witzi web assets
+    /// into Jellyfin Web's index.html is turned off.
+    /// </summary>
+    /// <remarks>
+    /// Left off, the pre-paint layer, theme, and browser helper are added to the index.html
+    /// response as it is served, which needs no write access to the web folder and survives a
+    /// jellyfin-web upgrade replacing the file. Turn this on to rely on the startup write into
+    /// index.html alone — for a server behind something that serves the web folder itself, or to
+    /// run a hand-edited copy of the file.
+    /// </remarks>
+    public bool DisableIndexMiddleware { get; set; }
 }

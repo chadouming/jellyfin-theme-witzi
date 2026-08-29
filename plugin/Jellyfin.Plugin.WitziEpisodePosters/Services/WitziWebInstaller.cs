@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Jellyfin.Plugin.WitziEpisodePosters.Configuration;
 using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Logging;
@@ -6,21 +5,20 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.WitziEpisodePosters.Services;
 
 /// <summary>
-/// Writes the Witzi pre-paint layer, compiled theme, and browser helper into Jellyfin Web.
+/// Writes the Witzi pre-paint layer, compiled theme, and browser helper into Jellyfin Web's
+/// index.html on disk.
 /// </summary>
+/// <remarks>
+/// This is the fallback delivery path, used only while <see cref="PluginConfiguration.DisableIndexMiddleware"/>
+/// is set. <see cref="WitziIndexInjectionStartupFilter"/> otherwise adds the same blocks to the
+/// index.html response as it is served, which is what makes the theme work on a web folder the
+/// Jellyfin service account cannot write and across a jellyfin-web upgrade that replaces the file.
+/// Writing to disk stays available for a deployment where something other than Jellyfin serves the
+/// web folder, and while the middleware is on this class instead clears what earlier releases wrote
+/// there, so exactly one path owns delivery.
+/// </remarks>
 public sealed class WitziWebInstaller
 {
-    private const string HelperResourceName = "Jellyfin.Plugin.WitziEpisodePosters.Web.witzi-posters.js";
-    private const string CriticalResourceName = "Jellyfin.Plugin.WitziEpisodePosters.Web.witzi-critical.css";
-    private const string HelperStartMarker = "<!-- BEGIN Witzi Theme Browser Helper -->";
-    private const string HelperEndMarker = "<!-- END Witzi Theme Browser Helper -->";
-    private const string CriticalStartMarker = "<!-- BEGIN Witzi Theme Pre-Paint Layer -->";
-    private const string CriticalEndMarker = "<!-- END Witzi Theme Pre-Paint Layer -->";
-    private const string ThemeStartMarker = "<!-- BEGIN Witzi Theme Stylesheet -->";
-    private const string ThemeEndMarker = "<!-- END Witzi Theme Stylesheet -->";
-    private static readonly Regex HelperBlockPattern = BlockPattern(HelperStartMarker, HelperEndMarker);
-    private static readonly Regex CriticalBlockPattern = BlockPattern(CriticalStartMarker, CriticalEndMarker);
-    private static readonly Regex ThemeBlockPattern = BlockPattern(ThemeStartMarker, ThemeEndMarker);
     private readonly IApplicationPaths _applicationPaths;
     private readonly ILogger _logger;
 
@@ -36,92 +34,51 @@ public sealed class WitziWebInstaller
     }
 
     /// <summary>
-    /// Brings Jellyfin Web's index.html in line with the current plugin configuration.
+    /// Brings Jellyfin Web's index.html on disk in line with the current plugin configuration:
+    /// carrying the Witzi blocks while the request-time middleware is turned off, and carrying
+    /// none while it is on.
     /// </summary>
     /// <param name="configuration">The configuration to bring Jellyfin Web in line with.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that completes once index.html matches the configuration.</returns>
-    public async Task InstallAsync(PluginConfiguration configuration, CancellationToken cancellationToken)
+    public async Task SyncAsync(PluginConfiguration configuration, CancellationToken cancellationToken)
     {
         try
         {
             var indexPath = Path.Combine(_applicationPaths.WebPath, "index.html");
             if (!File.Exists(indexPath))
             {
-                _logger.LogWarning("Cannot install the Witzi browser helper because Jellyfin Web index was not found at {Path}.", indexPath);
+                _logger.LogWarning("Cannot write the Witzi web assets because Jellyfin Web index was not found at {Path}.", indexPath);
                 return;
             }
-
-            var helper = await ReadEmbeddedResource(HelperResourceName, cancellationToken).ConfigureAwait(false);
-            if (helper is null)
-            {
-                _logger.LogError("Cannot install the Witzi browser helper because embedded resource {ResourceName} is missing.", HelperResourceName);
-                return;
-            }
-
-            if (helper.Contains("</script", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogError("Cannot install the Witzi browser helper because its source contains a closing script tag.");
-                return;
-            }
-
-            var critical = await ReadEmbeddedResource(CriticalResourceName, cancellationToken).ConfigureAwait(false);
-            if (critical is null)
-            {
-                _logger.LogError("Cannot install the Witzi pre-paint layer because embedded resource {ResourceName} is missing.", CriticalResourceName);
-                return;
-            }
-
-            if (critical.Contains("</style", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogError("Cannot install the Witzi pre-paint layer because its source contains a closing style tag.");
-                return;
-            }
-
-            var theme = await ReadConfiguredTheme(configuration, cancellationToken).ConfigureAwait(false);
 
             var document = await File.ReadAllTextAsync(indexPath, cancellationToken).ConfigureAwait(false);
-            var criticalInjection = StyleBlock(CriticalStartMarker, CriticalEndMarker, critical);
-            var helperInjection = $"{HelperStartMarker}{Environment.NewLine}<script>{Environment.NewLine}{helper}{Environment.NewLine}</script>{Environment.NewLine}{HelperEndMarker}";
 
-            // The pre-paint rules only do their job if the browser has them
-            // before Jellyfin renders, so they belong in head rather than beside
-            // the helper. User Custom CSS arrives long after a detail page has
-            // already assembled itself in front of the viewer.
-            var changed = TryApplyBlock(ref document, CriticalBlockPattern, criticalInjection, "</head>", indexPath);
+            if (!configuration.DisableIndexMiddleware)
+            {
+                // The middleware owns delivery, so the file should carry nothing. This
+                // clears blocks written by 1.1.24 and 1.1.25, whose palette would
+                // otherwise stay in the file after the configuration moved on.
+                if (!WitziIndexDocument.TryRemoveAll(ref document))
+                {
+                    _logger.LogDebug("The Witzi web assets are served at request time and Jellyfin Web's index.html carries none of its own.");
+                    return;
+                }
 
-            changed |= TryApplyBlock(ref document, HelperBlockPattern, helperInjection, "</body>", indexPath);
+                await WriteIndex(indexPath, document, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("Removed the Witzi web assets from {Path}; they are served at request time instead.", indexPath);
+                return;
+            }
 
-            // The theme goes at the end of body rather than in head. Jellyfin
-            // Web installs its own palette after anything head already carries:
-            // MUI writes a :root block of --jf-palette-* values into head as
-            // the bundle boots, and themes/<id>/theme.css arrives as a <link>
-            // React renders inside #reactRoot. The theme's :root bridge ties
-            // with both on specificity, so from head it loses every tie and the
-            // page keeps looking untouched. Nothing Jellyfin renders comes after
-            // it here. Jellyfin Web loads its bundles with defer, so the parser
-            // still reaches this block before the app boots and the theme is in
-            // place for the first paint either way.
-            //
-            // It anchors to the helper's opening marker rather than </body>.
-            // The helper is an inline script that runs the moment the parser
-            // reaches it, and its first act is to look for the theme's
-            // --witzi-theme-active, so the theme has to be parsed first. A
-            // </body> anchor gets that wrong on an upgrade, where the helper
-            // block is already in place and only the theme is being inserted.
-            var themeAnchor = document.Contains(HelperStartMarker, StringComparison.Ordinal)
-                ? HelperStartMarker
-                : "</body>";
+            var assets = await WitziWebAssets
+                .LoadAsync(configuration, _logger, cancellationToken)
+                .ConfigureAwait(false);
+            if (assets is null)
+            {
+                return;
+            }
 
-            // Releases through 1.1.24 wrote the theme into head, and
-            // TryApplyBlock updates a block where it already lives, so one left
-            // there is dropped first and reinstalled at the new anchor.
-            changed |= TryEvictThemeFromHead(ref document);
-            changed |= theme is null
-                ? TryRemoveBlock(ref document, ThemeBlockPattern)
-                : TryApplyBlock(ref document, ThemeBlockPattern, StyleBlock(ThemeStartMarker, ThemeEndMarker, theme), themeAnchor, indexPath);
-
-            if (!changed)
+            if (!WitziIndexDocument.TryApply(ref document, assets, _logger, indexPath))
             {
                 _logger.LogDebug("Jellyfin Web already carries the current Witzi pre-paint layer, theme, and browser helper.");
                 return;
@@ -132,150 +89,15 @@ public sealed class WitziWebInstaller
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Jellyfin Web is not writable. Grant the Jellyfin service write access to index.html or install the helper through a compatible JavaScript injector.");
+            // Not fatal while the middleware is on: it serves the same blocks without
+            // touching the file, and corrects a stale one it cannot delete. Only a
+            // server that has turned the middleware off needs this write to succeed.
+            _logger.LogWarning(ex, "Jellyfin Web's index.html is not writable, so it was left as it is.");
         }
         catch (IOException ex)
         {
-            _logger.LogError(ex, "Could not update Jellyfin Web index with the Witzi web assets.");
+            _logger.LogWarning(ex, "Could not update Jellyfin Web's index.html, so it was left as it is.");
         }
-    }
-
-    private static Regex BlockPattern(string startMarker, string endMarker) => new(
-        $"{Regex.Escape(startMarker)}[\\s\\S]*?{Regex.Escape(endMarker)}",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static string StyleBlock(string startMarker, string endMarker, string css)
-        => $"{startMarker}{Environment.NewLine}<style>{Environment.NewLine}{css}{Environment.NewLine}</style>{Environment.NewLine}{endMarker}";
-
-    private static async Task<string?> ReadEmbeddedResource(string resourceName, CancellationToken cancellationToken)
-    {
-        await using var resource = typeof(WitziWebInstaller).Assembly.GetManifestResourceStream(resourceName);
-        if (resource is null)
-        {
-            return null;
-        }
-
-        using var reader = new StreamReader(resource);
-        return (await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false)).TrimEnd();
-    }
-
-    private async Task<string?> ReadConfiguredTheme(
-        PluginConfiguration configuration,
-        CancellationToken cancellationToken)
-    {
-        if (!configuration.InjectTheme)
-        {
-            return null;
-        }
-
-        var palette = WitziPalettes.Normalize(configuration.Palette);
-        if (!string.Equals(palette, configuration.Palette, StringComparison.Ordinal))
-        {
-            _logger.LogWarning(
-                "This build has no {Configured} palette, so Jellyfin Web is served {Palette} instead.",
-                configuration.Palette,
-                palette);
-        }
-
-        var resourceName = WitziPalettes.ResourceName(palette);
-        var theme = await ReadEmbeddedResource(resourceName, cancellationToken).ConfigureAwait(false);
-        if (theme is null)
-        {
-            _logger.LogError("Cannot install the Witzi theme because embedded resource {ResourceName} is missing.", resourceName);
-            return null;
-        }
-
-        if (theme.Contains("</style", StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogError("Cannot install the Witzi theme because the {Palette} bundle contains a closing style tag.", palette);
-            return null;
-        }
-
-        return theme;
-    }
-
-    // Drops a theme block an earlier release left in <head> so InstallAsync can
-    // reinstall it before </body>. A block already past </head> is left alone:
-    // TryApplyBlock updates it where it sits, which is what keeps injections
-    // owned by other plugins in their original order.
-    private bool TryEvictThemeFromHead(ref string document)
-    {
-        var headEnd = document.LastIndexOf("</head>", StringComparison.OrdinalIgnoreCase);
-        if (headEnd < 0)
-        {
-            return false;
-        }
-
-        var existing = ThemeBlockPattern.Match(document);
-        if (!existing.Success || existing.Index > headEnd)
-        {
-            return false;
-        }
-
-        return TryRemoveBlock(ref document, ThemeBlockPattern);
-    }
-
-    private bool TryRemoveBlock(ref string document, Regex blockPattern)
-    {
-        if (!blockPattern.IsMatch(document))
-        {
-            return false;
-        }
-
-        // The trailing newline belongs to the injection, so it goes with it.
-        // Left behind, every disable and re-enable cycle would add a blank line.
-        document = Regex.Replace(
-            blockPattern.Replace(document, string.Empty),
-            @"\r?\n\r?\n(\r?\n)+",
-            Environment.NewLine + Environment.NewLine);
-        return true;
-    }
-
-    private bool TryApplyBlock(
-        ref string document,
-        Regex blockPattern,
-        string injection,
-        string anchorTag,
-        string indexPath)
-    {
-        var existingBlocks = blockPattern.Matches(document);
-        if (existingBlocks.Count == 1
-            && string.Equals(existingBlocks[0].Value, injection, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (existingBlocks.Count > 0)
-        {
-            // Replace the first block where it already lives and remove
-            // accidental duplicates. Re-appending it before the anchor can
-            // reorder or overwrite injections owned by other plugins.
-            var replacementWritten = false;
-            document = blockPattern.Replace(
-                document,
-                _ =>
-                {
-                    if (replacementWritten)
-                    {
-                        return string.Empty;
-                    }
-
-                    replacementWritten = true;
-                    return injection;
-                });
-
-            return true;
-        }
-
-        var anchor = document.LastIndexOf(anchorTag, StringComparison.OrdinalIgnoreCase);
-        if (anchor < 0)
-        {
-            _logger.LogWarning("Cannot install a Witzi block because {Path} has no {AnchorTag} tag.", indexPath, anchorTag);
-            return false;
-        }
-
-        document = document.Insert(anchor, injection + Environment.NewLine);
-        return true;
     }
 
     // Jellyfin Web cannot start without index.html, so it is replaced through a
@@ -286,7 +108,7 @@ public sealed class WitziWebInstaller
     // Staging needs write access to the directory, while rewriting the file in
     // place only needs write access to index.html itself. Container images
     // regularly grant the second and not the first, so a refused staging file
-    // falls back rather than leaving the helper uninstalled.
+    // falls back rather than leaving the assets uninstalled.
     private async Task WriteIndex(
         string indexPath,
         string content,

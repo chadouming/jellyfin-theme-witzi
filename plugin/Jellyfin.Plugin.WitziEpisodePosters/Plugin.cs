@@ -56,9 +56,10 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         };
     }
 
-    // Jellyfin Web reads the theme from index.html, which is written once at
-    // startup, so a palette picked on the configuration page would otherwise not
-    // appear until the next restart.
+    // The request-time middleware reads Configuration per request, so a palette
+    // picked on the configuration page is already live on the next page load. This
+    // only reconciles index.html on disk, which matters when request-time injection
+    // is turned off, and clears the file when it is turned back on.
     private void OnConfigurationChanged(object? sender, BasePluginConfiguration configuration)
     {
         if (configuration is not PluginConfiguration witziConfiguration)
@@ -69,18 +70,18 @@ public sealed class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         var installer = new WitziWebInstaller(ApplicationPaths, _logger);
 
         // The configuration endpoint should not block on a file rewrite, and it
-        // has nowhere to report one that fails. InstallAsync logs its own
+        // has nowhere to report one that fails. SyncAsync logs its own
         // failures, so this only has to keep an unexpected one from reaching the
         // task scheduler as an unobserved exception.
         _ = Task.Run(async () =>
         {
             try
             {
-                await installer.InstallAsync(witziConfiguration, CancellationToken.None).ConfigureAwait(false);
+                await installer.SyncAsync(witziConfiguration, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Could not reinstall the Witzi web assets after a configuration change.");
+                _logger.LogError(ex, "Could not reconcile Jellyfin Web's index.html after a configuration change.");
             }
         });
     }

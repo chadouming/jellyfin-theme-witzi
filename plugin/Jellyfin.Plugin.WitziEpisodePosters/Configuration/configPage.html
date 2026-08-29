@@ -33,6 +33,22 @@
               the setting above off to give the Custom CSS field priority again.
             </div>
           </div>
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="WitziDisableIndexMiddleware" />
+              <span>Write the assets into index.html instead of serving them</span>
+            </label>
+            <div class="fieldDescription checkboxFieldDescription">
+              Leave this off. The theme, pre-paint layer, and browser helper are
+              normally added to the index.html response as Jellyfin serves it, which
+              needs no write access to the web folder and survives a Jellyfin Web
+              upgrade replacing the file. Turn it on only where something other than
+              Jellyfin serves the web folder, or to run a hand-edited index.html; the
+              Jellyfin service account then has to be able to write that file, and
+              the assets are lost on every Jellyfin Web upgrade until the next
+              restart.
+            </div>
+          </div>
         </div>
         <div>
           <button is="emby-button" type="submit" class="raised button-submit block">
@@ -52,6 +68,7 @@
           ApiClient.getPluginConfiguration(pluginId).then(function (config) {
             document.querySelector('#WitziInjectTheme').checked = config.InjectTheme !== false;
             document.querySelector('#WitziPalette').value = config.Palette || 'mocha';
+            document.querySelector('#WitziDisableIndexMiddleware').checked = config.DisableIndexMiddleware === true;
             Dashboard.hideLoadingMsg();
           });
         });
@@ -63,6 +80,7 @@
           ApiClient.getPluginConfiguration(pluginId).then(function (config) {
             config.InjectTheme = document.querySelector('#WitziInjectTheme').checked;
             config.Palette = document.querySelector('#WitziPalette').value;
+            config.DisableIndexMiddleware = document.querySelector('#WitziDisableIndexMiddleware').checked;
             ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
               Dashboard.processPluginConfigurationUpdateResult(result);
             });
