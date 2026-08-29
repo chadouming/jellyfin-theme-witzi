@@ -635,13 +635,18 @@ html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .w
   filter: none !important;
 }
 
-.card:is([data-type="Movie"], [data-type="Series"]):is(:hover, :focus, .show-focus) .cardImageContainer {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.card:is([data-type="Movie"], [data-type="Series"]):is(:hover, :focus, .show-focus) .cardOverlayContainer {
-  background-color: transparent !important;
+/*
+ * Library grids are built by Jellyfin's React card, whose hover menu holds a
+ * full-size <a class="cardImageContainer"> link. Jellyfin stretches every
+ * .cardImageContainer inside .cardScalable to fill the card, so that link
+ * picked up the surface colour meant for real artwork frames and painted the
+ * poster over in flat colour once the overlay faded in. Home rows come from
+ * the legacy card builder, whose hover menu has no such link, which is why
+ * only libraries showed it. Keep the link unpainted so the overlay dims.
+ */
+.cardOverlayContainer .cardImageContainer {
+  background-color: transparent;
+  box-shadow: none;
 }
 
 /* The main series/season artwork is a static anchor, not a lifting media card. */

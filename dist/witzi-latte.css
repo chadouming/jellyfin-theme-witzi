@@ -59,6 +59,10 @@ html[data-witzi-posters] #itemDetailPage:not([data-witzi-detail-content="active"
   .itemDetailsGroup
 ) {
   opacity: 0;
+  /* Re-masking is an instant cut, never a fade. Fading content back out reads
+   * as an extra flash, and the helper only re-masks when what is on screen
+   * belongs to the previous item anyway. */
+  transition: none;
   /* Failsafe. If the helper stalls, errors, or never reaches "active", the
    * page reveals itself anyway. A jump is a much smaller problem than content
    * that stays invisible, so this must not depend on JavaScript running. */
@@ -72,17 +76,16 @@ html[data-witzi-posters] #itemDetailPage[data-witzi-detail-content="active"] :is
   .itemDetailsGroup
 ) {
   opacity: 1;
-  /* A separate name so flipping the attribute restarts the animation instead
-   * of letting the delayed failsafe keep running. */
-  animation: witzi-detail-reveal 160ms ease-out forwards;
+  /* Drop the failsafe and reveal with a transition rather than a second
+   * keyframe animation. A keyframe reveal always restarts from zero, so
+   * content the failsafe had already shown blinked out and faded back in. A
+   * transition interpolates from whatever is on screen: still-hidden content
+   * fades in, already-visible content does not move. */
+  animation: none;
+  transition: opacity 160ms ease-out;
 }
 
 @keyframes witzi-detail-failsafe {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes witzi-detail-reveal {
   from { opacity: 0; }
   to { opacity: 1; }
 }
@@ -96,6 +99,7 @@ html[data-witzi-posters] #itemDetailPage[data-witzi-detail-content="active"] :is
   ) {
     animation: none;
     opacity: 1;
+    transition: none;
   }
 }
 
@@ -108,6 +112,7 @@ html[data-witzi-posters]
   .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
   .card[data-id]:not([data-witzi-artwork]) .cardImageContainer {
   opacity: 0;
+  transition: none;
   /* Same failsafe as the detail ribbon. A helper that never decides must not
    * leave a row of blank cards behind. */
   animation: witzi-card-failsafe 200ms ease-out 600ms forwards;
@@ -117,15 +122,15 @@ html[data-witzi-posters]
   .itemsContainer[data-monitor*="videoplayback"][data-monitor*="markplayed"]
   .card[data-id][data-witzi-artwork] .cardImageContainer {
   opacity: 1;
-  animation: witzi-card-reveal 200ms ease-out forwards;
+  /* Same one-way reveal as the detail ribbon. The theme arrives as Custom CSS
+   * long after first paint, so the helper regularly decides a card well after
+   * the 600ms failsafe already revealed it; a keyframe reveal blinked every
+   * home row a second time. */
+  animation: none;
+  transition: opacity 200ms ease-out;
 }
 
 @keyframes witzi-card-failsafe {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes witzi-card-reveal {
   from { opacity: 0; }
   to { opacity: 1; }
 }
@@ -136,6 +141,7 @@ html[data-witzi-posters]
     .card[data-id][data-witzi-artwork] .cardImageContainer {
     animation: none;
     opacity: 1;
+    transition: none;
   }
 }
 
@@ -776,13 +782,18 @@ html:has(.videoPlayerContainer) :is(.backgroundContainer, .backdropContainer, .w
   filter: none !important;
 }
 
-.card:is([data-type="Movie"], [data-type="Series"]):is(:hover, :focus, .show-focus) .cardImageContainer {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.card:is([data-type="Movie"], [data-type="Series"]):is(:hover, :focus, .show-focus) .cardOverlayContainer {
-  background-color: transparent !important;
+/*
+ * Library grids are built by Jellyfin's React card, whose hover menu holds a
+ * full-size <a class="cardImageContainer"> link. Jellyfin stretches every
+ * .cardImageContainer inside .cardScalable to fill the card, so that link
+ * picked up the surface colour meant for real artwork frames and painted the
+ * poster over in flat colour once the overlay faded in. Home rows come from
+ * the legacy card builder, whose hover menu has no such link, which is why
+ * only libraries showed it. Keep the link unpainted so the overlay dims.
+ */
+.cardOverlayContainer .cardImageContainer {
+  background-color: transparent;
+  box-shadow: none;
 }
 
 /* The main series/season artwork is a static anchor, not a lifting media card. */
