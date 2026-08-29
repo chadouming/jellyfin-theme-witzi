@@ -8,6 +8,14 @@
     "category": "Metadata",
     "versions": [
       {
+        "version": "1.1.26.0",
+        "changelog": "Serves the theme, pre-paint layer, and browser helper with Jellyfin Web's index.html response instead of writing them into the file. The on-disk edit only reached the browser where the Jellyfin service account could write the web folder, and a Jellyfin Web upgrade replaced the file and took the blocks with it; on such a server, picking a palette changed nothing on screen and the theme still had to come from the branding Custom CSS field. ASP.NET middleware registered with the host now adds the blocks to the response as Jellyfin serves it, reading the configuration per request, so a palette applies on the next page load with nothing written anywhere and no restart. It touches only the web shell request and only a GET returning 200 text/html, and serves the original bytes on any failure. The on-disk write stays available behind a configuration toggle for a server where something other than Jellyfin serves the web folder; while it is off, the startup task clears the blocks releases 1.1.24 and 1.1.25 wrote into index.html.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/chadouming/jellyfin-theme-witzi/releases/download/v1.1.26/Witzi.Episode.Posters_1.1.26.0.zip",
+        "checksum": "3de4d805f8e6c1ecec185d317980f155",
+        "timestamp": "2026-08-29T15:15:44Z"
+      },
+      {
         "version": "1.1.25.0",
         "changelog": "Restores the injected theme, which Jellyfin Web was overriding wholesale. The plugin wrote the bundle into <head>, but Jellyfin installs its own palette after anything head already carries: MUI writes a :root block of --jf-palette-* values into head as the bundle boots, and themes/<id>/theme.css arrives as a <link> React renders inside #reactRoot. The theme's :root bridge ties with both on specificity and lost every tie, so picking a palette changed nothing on screen. The bundle now goes at the end of <body>, which nothing Jellyfin renders comes after, and an upgrade evicts the copy an earlier release left in head. Jellyfin Web loads its bundles with defer, so the theme is still in place for the first paint. It now also outranks the Custom CSS field, so overrides pasted there need !important.",
         "targetAbi": "12.0.0.0",

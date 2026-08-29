@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "1.1.24.0"
+version: "1.1.26.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,16 +17,17 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Serves the theme from Jellyfin Web instead of the Custom CSS field, and stops
-  the page settling in front of the viewer. Jellyfin renders Custom CSS from a
-  React component gated on the branding request, so a theme pasted there cannot
-  apply until after the first paint: the page shows stock Jellyfin colours and
-  landscape home rows, then snaps. The plugin now embeds the six compiled
-  palettes and writes the selected one into index.html beside the pre-paint
-  layer, with a configuration page to pick it and no restart needed to change
-  it. The pre-paint layer also stops revealing content twice: its reveal was a
-  keyframe animation starting from zero, so cards the failsafe had already
-  shown blinked out and faded back in once the helper decided them. Library
-  posters no longer turn a flat colour on hover either, which came from the
-  React card's full-size overlay link inheriting the artwork frame's surface
-  colour.
+  Serves the theme, pre-paint layer, and browser helper with Jellyfin Web's
+  index.html response instead of writing them into the file. The on-disk edit
+  only reached the browser where the Jellyfin service account could write the
+  web folder, and a Jellyfin Web upgrade replaced the file and took the blocks
+  with it; on such a server, picking a palette changed nothing on screen and the
+  theme still had to come from the branding Custom CSS field. ASP.NET middleware
+  registered with the host now adds the blocks to the response as Jellyfin
+  serves it, reading the configuration per request, so a palette applies on the
+  next page load with nothing written anywhere and no restart. It touches only
+  the web shell request and only a GET returning 200 text/html, and serves the
+  original bytes on any failure. The on-disk write stays available behind a
+  configuration toggle for a server where something other than Jellyfin serves
+  the web folder; while it is off, the startup task clears the blocks releases
+  1.1.24 and 1.1.25 wrote into index.html.
