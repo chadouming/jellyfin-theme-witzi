@@ -1,0 +1,73 @@
+<div id="WitziEpisodePostersConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+  <div data-role="content">
+    <div class="content-primary">
+      <form id="WitziEpisodePostersConfigForm">
+        <div class="verticalSection">
+          <h2 class="sectionTitle">Witzi theme</h2>
+          <div class="checkboxContainer checkboxContainer-withDescription">
+            <label class="emby-checkbox-label">
+              <input is="emby-checkbox" type="checkbox" id="WitziInjectTheme" />
+              <span>Serve the theme from Jellyfin Web</span>
+            </label>
+            <div class="fieldDescription checkboxFieldDescription">
+              Writes the compiled theme into index.html so it is in place before the
+              first paint. Jellyfin applies the Custom CSS field only after the
+              branding request resolves, so a theme pasted there shows stock
+              Jellyfin colours and landscape home rows first, then snaps to Witzi.
+              Turn this off to go back to Custom CSS delivery.
+            </div>
+          </div>
+          <div class="selectContainer">
+            <label class="selectLabel" for="WitziPalette">Palette</label>
+            <select is="emby-select" id="WitziPalette" class="emby-select-withcolor emby-select">
+              <option value="mocha">Catppuccin Mocha</option>
+              <option value="latte">Catppuccin Latte</option>
+              <option value="nord">Nord</option>
+              <option value="solarized">Solarized</option>
+              <option value="dracula">Dracula</option>
+              <option value="gruvbox">Gruvbox</option>
+            </select>
+            <div class="fieldDescription">
+              Anything still in the Custom CSS field loads after this one and keeps
+              overriding it.
+            </div>
+          </div>
+        </div>
+        <div>
+          <button is="emby-button" type="submit" class="raised button-submit block">
+            <span>Save</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script type="text/javascript">
+    (function () {
+      var pluginId = '896d9ba3-a129-4fcc-be38-c0521ebe2d8f';
+
+      document.querySelector('#WitziEpisodePostersConfigPage')
+        .addEventListener('pageshow', function () {
+          Dashboard.showLoadingMsg();
+          ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            document.querySelector('#WitziInjectTheme').checked = config.InjectTheme !== false;
+            document.querySelector('#WitziPalette').value = config.Palette || 'mocha';
+            Dashboard.hideLoadingMsg();
+          });
+        });
+
+      document.querySelector('#WitziEpisodePostersConfigForm')
+        .addEventListener('submit', function (event) {
+          event.preventDefault();
+          Dashboard.showLoadingMsg();
+          ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            config.InjectTheme = document.querySelector('#WitziInjectTheme').checked;
+            config.Palette = document.querySelector('#WitziPalette').value;
+            ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+              Dashboard.processPluginConfigurationUpdateResult(result);
+            });
+          });
+          return false;
+        });
+    })();
+  </script>
+</div>

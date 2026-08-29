@@ -1,7 +1,7 @@
 ---
 name: "Witzi Episode Posters"
 guid: "896d9ba3-a129-4fcc-be38-c0521ebe2d8f"
-version: "1.1.23.0"
+version: "1.1.24.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Persistent 2:3 episode posters generated from each video"
@@ -17,11 +17,16 @@ owner: "chadouming"
 artifacts:
 - "Jellyfin.Plugin.WitziEpisodePosters.dll"
 changelog: >
-  Stops reporting a poster as failed when Jellyfin is saving the same episode at
-  the same time. Registering artwork rewrites the whole item, including its
-  provider rows, and Jellyfin offers no narrower save, so a metadata refresh
-  touching the same episode can still win the race after the retries. The poster
-  file and its sidecar are already installed by that point, and both the local
-  image provider and the post-scan pass select it afterwards, so the write now
-  reports a deferral instead of throwing. Those episodes are counted as
-  registration-deferred rather than failed, and the retry backs off further.
+  Serves the theme from Jellyfin Web instead of the Custom CSS field, and stops
+  the page settling in front of the viewer. Jellyfin renders Custom CSS from a
+  React component gated on the branding request, so a theme pasted there cannot
+  apply until after the first paint: the page shows stock Jellyfin colours and
+  landscape home rows, then snaps. The plugin now embeds the six compiled
+  palettes and writes the selected one into index.html beside the pre-paint
+  layer, with a configuration page to pick it and no restart needed to change
+  it. The pre-paint layer also stops revealing content twice: its reveal was a
+  keyframe animation starting from zero, so cards the failsafe had already
+  shown blinked out and faded back in once the helper decided them. Library
+  posters no longer turn a flat colour on hover either, which came from the
+  React card's full-size overlay link inheriting the artwork frame's surface
+  colour.

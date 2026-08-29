@@ -47,8 +47,15 @@
     `${DETAIL_PAGE_SELECTOR} .itemDetailsGroup`
   ].join(', ');
   const DETAIL_RIBBON_ALIGN_OFFSET = '--witzi-detail-ribbon-align-offset';
-  const THEME_WAIT_INITIAL_MS = 250;
-  const THEME_WAIT_MAX_MS = 5000;
+  // The theme is delivered as Custom CSS, which Jellyfin applies long after
+  // this helper runs from <head>. Every millisecond between the theme landing
+  // and this poll noticing it is a millisecond the pre-paint masks stay up with
+  // nothing able to lift them, so poll tightly while a theme could still be on
+  // its way and only then fall back to a cheap heartbeat for the servers that
+  // have the plugin but no Witzi theme.
+  const THEME_WAIT_FAST_MS = 100;
+  const THEME_WAIT_FAST_WINDOW_MS = 5000;
+  const THEME_WAIT_IDLE_MS = 5000;
   const itemCache = new Map();
   const retryAfter = new Map();
   const pendingCards = new WeakSet();
@@ -73,7 +80,7 @@
   let detailScheduled = false;
   let playbackScheduled = false;
   let started = false;
-  let themeWaitAttempts = 0;
+  let themeWaitStartedAt = 0;
   let themeWaitTimer;
   let videoPlaybackActive = false;
   let messageSubscription = null;
@@ -839,11 +846,10 @@
 
     if (!themeIsActive()) {
       document.documentElement?.setAttribute?.('data-witzi-posters', 'waiting');
-      const delay = Math.min(
-        THEME_WAIT_INITIAL_MS * (2 ** Math.min(themeWaitAttempts, 5)),
-        THEME_WAIT_MAX_MS
-      );
-      themeWaitAttempts += 1;
+      if (!themeWaitStartedAt) themeWaitStartedAt = Date.now();
+      const delay = Date.now() - themeWaitStartedAt < THEME_WAIT_FAST_WINDOW_MS
+        ? THEME_WAIT_FAST_MS
+        : THEME_WAIT_IDLE_MS;
       window.clearTimeout(themeWaitTimer);
       themeWaitTimer = window.setTimeout(startWhenThemeIsReady, delay);
       return;

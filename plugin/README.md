@@ -99,6 +99,18 @@ and rewrites `index.html` in place instead. If `index.html` itself is not
 writable, the startup task logs an error and the helper can still be installed
 manually.
 
+The plugin also carries the theme itself. Jellyfin renders the Custom CSS field
+from a React component gated on the branding request, so a theme pasted there
+cannot reach the browser until after the first paint: the page shows stock
+Jellyfin colours and landscape home rows, then snaps to Witzi. The six compiled
+palettes are embedded in the assembly, and the selected one is written into
+`<head>` in the same pass that installs the pre-paint layer and the helper. Pick
+it under **Dashboard -> Plugins -> Witzi Episode Posters**; saving rewrites
+`index.html`, so a palette change needs no restart. Turning **Serve the theme
+from Jellyfin Web** off takes the stylesheet back out and returns to Custom CSS
+delivery. This also puts `--witzi-theme-active` in front of the helper's first
+check, which is what the helper waits for before it starts.
+
 The project targets Jellyfin ABI 12.0.0.0, .NET 10, and the Jellyfin 12.0 RC5
 packages. It is not loadable by Jellyfin 10.x.
 

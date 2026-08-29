@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+
+// The palettes scripts/build.mjs compiles. Kept in step with WitziPalettes.All
+// and the plugin configuration page.
+const VARIANTS = ['mocha', 'latte', 'nord', 'solarized', 'dracula', 'gruvbox'];
 
 class ClassList {
   values = new Set();
@@ -919,13 +924,13 @@ test('keeps portrait rows, joins the right toolbar, and reveals backdrops', asyn
     css,
     /\.card\.show-focus \.cardBox,[\s\S]*\.card:hover \.cardBox\s*\{[^}]*filter:\s*none\s*!important;/s
   );
-  assert.match(
+  assert.doesNotMatch(
     css,
-    /\.card:is\(\[data-type="Movie"\], \[data-type="Series"\]\):is\(:hover, :focus, \.show-focus\) \.cardImageContainer\s*\{[^}]*opacity:\s*1\s*!important;[^}]*visibility:\s*visible\s*!important;/s
+    /\.card:is\(\[data-type="Movie"\], \[data-type="Series"\]\):is\(:hover, :focus, \.show-focus\)/
   );
   assert.match(
     css,
-    /\.card:is\(\[data-type="Movie"\], \[data-type="Series"\]\):is\(:hover, :focus, \.show-focus\) \.cardOverlayContainer\s*\{[^}]*background-color:\s*transparent\s*!important;/s
+    /\.cardOverlayContainer \.cardImageContainer\s*\{[^}]*background-color:\s*transparent;[^}]*box-shadow:\s*none;/s
   );
   assert.match(css, /\[data-monitor\*="videoplayback"\]\[data-monitor\*="markplayed"\]/);
   assert.match(css, /\.MuiBox-root:has\(\+ \.MuiBox-root\):not\(:empty\)/);
@@ -1370,10 +1375,63 @@ test('restores Witzi posters that a library scan replaced', async () => {
   assert.match(body, /restored=\{restored\}/);
 });
 
+test('serves every built palette from the plugin under its bundle name', async () => {
+  const palettesSource = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/Configuration/WitziPalettes.cs',
+      import.meta.url
+    ),
+    'utf8'
+  );
+  const configPage = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/Configuration/configPage.html',
+      import.meta.url
+    ),
+    'utf8'
+  );
+  const project = await readFile(
+    new URL(
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/Jellyfin.Plugin.WitziEpisodePosters.csproj',
+      import.meta.url
+    ),
+    'utf8'
+  );
+
+  // The palette list, the picker, and dist/ have to name the same six bundles.
+  // A palette missing from any one of them is an unselectable theme or, worse,
+  // a selection that resolves to no embedded resource at run time.
+  const declared = [...palettesSource.matchAll(/^\s{8}"([a-z]+)",?$/gm)].map((match) => match[1]);
+  assert.deepEqual(declared, VARIANTS);
+
+  const offered = [...configPage.matchAll(/<option value="([a-z]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(offered, VARIANTS);
+
+  for (const variant of VARIANTS) {
+    assert.ok(
+      existsSync(new URL(`../dist/witzi-${variant}.css`, import.meta.url)),
+      `dist/witzi-${variant}.css is missing`
+    );
+  }
+
+  // The bundles are embedded straight out of dist/ so a generated file cannot
+  // ship twice and drift, and %(Filename) is what keeps the resource name equal
+  // to the name WitziPalettes.ResourceName builds.
+  assert.match(project, /<EmbeddedResource Include="\.\.\\\.\.\\dist\\witzi-\*\.css">/);
+  assert.match(
+    project,
+    /<LogicalName>Jellyfin\.Plugin\.WitziEpisodePosters\.Web\.Themes\.%\(Filename\)\.css<\/LogicalName>/
+  );
+  assert.match(
+    palettesSource,
+    /\$"Jellyfin\.Plugin\.WitziEpisodePosters\.Web\.Themes\.witzi-\{palette\}\.css"/
+  );
+});
+
 test('keeps a current injected helper in place around other plugin scripts', async () => {
   const source = await readFile(
     new URL(
-      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/ScheduledTasks/InstallWitziWebHelperTask.cs',
+      '../plugin/Jellyfin.Plugin.WitziEpisodePosters/Services/WitziWebInstaller.cs',
       import.meta.url
     ),
     'utf8'
@@ -1388,9 +1446,17 @@ test('keeps a current injected helper in place around other plugin scripts', asy
   // go in head. Custom CSS arrives long after a detail page has assembled.
   assert.match(source, /private static readonly Regex CriticalBlockPattern/);
   assert.match(source, /TryApplyBlock\(ref document, CriticalBlockPattern, criticalInjection, "<\/head>", indexPath\)/);
-  assert.match(source, /TryApplyBlock\(ref document, HelperBlockPattern, injection, "<\/body>", indexPath\)/);
+  assert.match(source, /TryApplyBlock\(ref document, HelperBlockPattern, helperInjection, "<\/body>", indexPath\)/);
   assert.match(source, /Web\.witzi-critical\.css/);
   assert.match(source, /critical\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
+  // The theme goes in head for the same reason the pre-paint layer does: the
+  // Custom CSS field cannot deliver it until after Jellyfin's first paint.
+  assert.match(source, /private static readonly Regex ThemeBlockPattern/);
+  assert.match(source, /StyleBlock\(ThemeStartMarker, ThemeEndMarker, theme\), "<\/head>", indexPath\)/);
+  // Turning theme injection off has to take the stylesheet back out, or the
+  // Custom CSS fallback would keep fighting a copy nothing maintains.
+  assert.match(source, /TryRemoveBlock\(ref document, ThemeBlockPattern\)/);
+  assert.match(source, /theme\.Contains\("<\/style", StringComparison\.OrdinalIgnoreCase\)/);
   assert.doesNotMatch(source, /withoutPreviousHelper/);
   assert.doesNotMatch(source, /Regex\.Replace\(current, markerPattern, string\.Empty/);
   // Jellyfin Web cannot start without index.html, so it is staged and renamed
